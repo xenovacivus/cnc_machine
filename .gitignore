@@ -28,3 +28,4 @@
 TcfTransactionLog.csv
 firmware/cnc_robot/Debug/*
 firmware/cnc_robot/Release/*
+*.atsuo

@@ -24,5 +24,7 @@
 *.out
 *.app
 
-# Other various files
+# Repo specific files
 TcfTransactionLog.csv
+firmware/cnc_robot/Debug/*
+firmware/cnc_robot/Release/*

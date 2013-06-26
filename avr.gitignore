@@ -1,5 +1,13 @@
 # Object files
 *.o
+*.hex
+*.mk
+*.d
+*.eep
+*.elf
+*.lss
+*.map
+*.srec
 
 # Libraries
 *.lib

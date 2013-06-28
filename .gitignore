@@ -28,4 +28,7 @@
 TcfTransactionLog.csv
 firmware/cnc_robot/Debug/*
 firmware/cnc_robot/Release/*
+software/*/*/Debug/*
+software/*/*/Release/*
+*.csproj.user
 *.atsuo

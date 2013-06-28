@@ -35,6 +35,16 @@ uint8_t v[32] = {0,3,6,9,12,15,18,20,23,25,27,28,30,31,31,32,32,32,31,31,30,28,2
 volatile int32_t location = 0;
 volatile int32_t delta = 0;
 
+typedef struct
+{
+	uint16_t time;
+	int32_t x;
+	int32_t y;
+	int32_t z;
+} Location_t;
+
+volatile Location_t nextLocation;
+volatile uint8_t location_buffer_size = 0;
 
 
 volatile AXIS_t x_axis;
@@ -110,7 +120,7 @@ void UpdateAxis (volatile AXIS_t * axis)
 	}
 	else // Intermediate
 	{
-		// This math takes about 300uS
+		// This math takes about 100uS per axis
 		int32_t add = (1 + (axis->delta * (1 + 2 * ovf_count)) / time) / 2;
 		
 		// Buffered to prevent update while reading outside of interrupts
@@ -129,6 +139,21 @@ void OnAxisTimerOverflow ()
 	if (time == 0)
 	{
 		// Nothing to do
+		if(location_buffer_size > 0)
+		{
+			x_axis.delta = nextLocation.x - x_axis.location;
+			y_axis.delta = nextLocation.y - y_axis.location;
+			z_axis.delta = nextLocation.z - z_axis.location;
+			time = nextLocation.time;
+			ovf_count = 1;
+			location_buffer_size--;
+		}
+		//else
+		//{
+		//	x_axis.delta = 0;
+		//	y_axis.delta = 0;
+		//	z_axis.delta = 0;
+		//}
 	}
 	else
 	{
@@ -138,13 +163,27 @@ void OnAxisTimerOverflow ()
 	
 		if (ovf_count == time)
 		{
-			// TODO: If there's a buffer of positions, move to the next one here
-			// (set delta, time, and count accordingly)
-			x_axis.delta = 0;
-			y_axis.delta = 0;
-			z_axis.delta = 0;
 			time = 0;
 			ovf_count = 0;
+			//if(location_buffer_size > 0)
+			//{
+			//	x_axis.delta = nextLocation.x - x_axis.location;
+			//	y_axis.delta = nextLocation.y - y_axis.location;
+			//	z_axis.delta = nextLocation.z - z_axis.location;
+			//	time = nextLocation.time;
+			//	ovf_count = 0;
+			//	location_buffer_size--;
+			//}
+			//else
+			//{
+			//	// TODO: If there's a buffer of positions, move to the next one here
+			//	// (set delta, time, and count accordingly)
+			//	x_axis.delta = 0;
+			//	y_axis.delta = 0;
+			//	z_axis.delta = 0;
+			//	time = 0;
+			//	ovf_count = 0;
+			//}
 			PORTE.OUTTGL = 0x02;
 		}
 		else
@@ -174,6 +213,20 @@ ISR(TCC1_OVF_vect)
 #define TASK_LIMIT_SWITCH_X 1
 #define TASK_LIMIT_SWITCH_Y 2
 #define TASK_LIMIT_SWITCY_Z 3
+
+uint16_t decode_uint16_t (uint8_t * b)
+{
+	return (uint16_t)(b[0] | (b[1] << 8));
+}
+
+uint32_t decode_uint32_t (uint8_t * b)
+{
+	return (uint32_t)(
+		(b[0]      ) | 
+		(b[1] <<  8) | 
+		(b[2] << 16) | 
+		(b[3] << 24));
+}
 
 int main(void)
 {
@@ -331,52 +384,35 @@ int main(void)
 						status_bits |= 0x04;
 					}
 					s->transmit_data[13] = status_bits;
+					s->transmit_data[14] = location_buffer_size;
 					
-					SerialTransmit (s, 0x00, 14); // Transmit to master device
+					SerialTransmit (s, 0x00, 15); // Transmit to master device
 					break;
 				}
 				case 0x32: // Set Position + Speed
 				{
-					uint16_t speed_x = 0;
-					uint16_t speed_y = 0;
-					uint16_t speed_z = 0;
-					int32_t x = 0;
-					int32_t y = 0;
-					int32_t z = 0;
-					uint8_t i = 0;
+					Location_t l;
 					
-					/* Bytes 1:6 are speed */
-					for (i = 2; i >= 1; i--)
-					{
-						speed_x = (speed_x << 8) | s->receive_data[i];
-						speed_y = (speed_y << 8) | s->receive_data[i+2];
-						speed_z = (speed_z << 8) | s->receive_data[i+4];
-					}
+					/* Bytes 1:2 are time in milliseconds */
+					l.time = decode_uint16_t(&(s->receive_data[1]));
 					
-					/* Bytes 7:18 are position */
-					for (i = 10; i >= 7; i--)
-                    {
-                        x = (x << 8) | s->receive_data[i];
-                        y = (y << 8) | s->receive_data[i + 4];
-                        z = (z << 8) | s->receive_data[i + 8];
-                    }
+					/* Bytes 3:14 are position */
+					l.x = decode_uint32_t(&(s->receive_data[3]));
+					l.y = decode_uint32_t(&(s->receive_data[7]));
+					l.z = decode_uint32_t(&(s->receive_data[11]));
 					
-					// Move the specified distance in 5 seconds
-					// TODO: reincorporate speed into the command
+					// Add the new location to the buffer
 					step_timer->INTCTRLA &= ~TC1_OVFINTLVL_gm; // Disable the step timer
-					time = 5000;
-					ovf_count = 0;
-					x_axis.delta = x - x_axis.location;
-					y_axis.delta = y - y_axis.location;
-					z_axis.delta = z - z_axis.location;
+					if (location_buffer_size < 1)
+					{
+						nextLocation = l;
+						location_buffer_size++;
+					}
 					step_timer->INTCTRLA |= TC_OVFINTLVL_LO_gc; // Enable the step timer
 					
-					//AxisRun(&x_axis, x, speed_x);
-					//AxisRun(&y_axis, y, speed_y);
-					//AxisRun(&z_axis, z, speed_z);
-					
 					s->transmit_data[0] = 0x32;
-					SerialTransmit(s, 0x00, 1);
+					s->transmit_data[1] = location_buffer_size;
+					SerialTransmit(s, 0x00, 2);
 					break;
 				}
 			}

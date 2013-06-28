@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using OpenTK;
 
 namespace Robot
 {
@@ -15,6 +16,12 @@ namespace Robot
             this.x = x;
             this.y = y;
             this.z = z;
+        }
+        public Point3(Vector3 v)
+        {
+            this.x = (int)v.X;
+            this.y = (int)v.Y;
+            this.z = (int)v.Z;
         }
 
         public int Length(Point3 p)
@@ -30,6 +37,11 @@ namespace Robot
         internal Point3 Add(Point3 p)
         {
             return new Point3(p.x + x, p.y + y, p.z + z);
+        }
+
+        internal Vector3 ToVector3()
+        {
+            return new Vector3(x, y, z);
         }
     }
     public class Point3F
@@ -79,16 +91,16 @@ namespace Robot
 
     public abstract class IHardware
     {
-        public abstract Point3F GetPosition();
+        public abstract Vector3 GetPosition();
 
         public EventHandler onRobotReady;
 
         //public abstract void SetToGo(Point3F p, float tool_speed);
-        public abstract void GoTo(Point3F p, float tool_speed);
+        public abstract void GoTo(Vector3 p, float tool_speed);
         //public abstract float GetProgress();
-        public abstract bool IsMoving();
-        public abstract bool Ready();
-        public abstract void SetSpeed(int speed);
-        public abstract void SetOffset(Point3F p);
+        //public abstract bool IsMoving();
+        //public abstract bool Ready();
+        //public abstract void SetSpeed(int speed);
+        public abstract void SetOffset(Vector3 p);
     }
 }

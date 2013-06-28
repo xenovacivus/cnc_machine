@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Serial;
 using System.Timers;
+using OpenTK;
 
 namespace Robot
 {
@@ -54,24 +55,28 @@ namespace Robot
         {
             private bool data_valid;
             private Int32 x, y, z;
-            private UInt16 speed_x, speed_y, speed_z;
+            private UInt16 time_milliseconds;
             private static byte commandCode = 0x32;
-            public MoveCommand(Point3 location, UInt16 speed_x, UInt16 speed_y, UInt16 speed_z)
+            private byte locations;
+            public byte Locations
+            {
+                get
+                {
+                    return locations;
+                }
+            }
+            public MoveCommand(Point3 location, UInt16 time_milliseconds)
             {
                 this.x = (Int32)location.x;
                 this.y = (Int32)location.y;
                 this.z = (Int32)location.z;
-                this.speed_x = speed_x;
-                this.speed_y = speed_y;
-                this.speed_z = speed_z;
+                this.time_milliseconds = time_milliseconds;
                 data_valid = false;
             }
             public override byte[] GenerateCommand()
             {
                 return new byte[] { commandCode, 
-                    (byte)(speed_x & 0xFF), (byte)((speed_x >> 8) & 0xFF),
-                    (byte)(speed_y & 0xFF), (byte)((speed_y >> 8) & 0xFF),
-                    (byte)(speed_z & 0xFF), (byte)((speed_z >> 8) & 0xFF),
+                    (byte)(time_milliseconds & 0xFF), (byte)((time_milliseconds >> 8) & 0xFF),
                     (byte)(x & 0xFF), (byte)((x >> 8) & 0xFF), (byte)((x >> 16) & 0xFF), (byte)((x >> 24) & 0xFF),
                     (byte)(y & 0xFF), (byte)((y >> 8) & 0xFF), (byte)((y >> 16) & 0xFF), (byte)((y >> 24) & 0xFF),
                     (byte)(z & 0xFF), (byte)((z >> 8) & 0xFF), (byte)((z >> 16) & 0xFF), (byte)((z >> 24) & 0xFF)};
@@ -81,6 +86,8 @@ namespace Robot
                 if (data.Length > 0 && data[0] == commandCode)
                 {
                     data_valid = true;
+                    locations = data[1];
+                    //Console.WriteLine("Response from MoveCommand: locations = {0}", locations);
                 }
                 else
                 {
@@ -111,7 +118,7 @@ namespace Robot
             public override void ProcessResponse(byte[] data)
             {
                 data_valid = (data[0] == commandCode);
-                if (data.Length <= 13)
+                if (data.Length <= 14)
                 {
                     data_valid = false;
                     return;
@@ -133,14 +140,22 @@ namespace Robot
                 bool z_moving = (status_bits & 0x04) > 0;
 
                 is_moving = x_moving | y_moving | z_moving;
-
+                locations = data[14];
                 currentPosition = new Point3(x, y, z);
 
-                Console.WriteLine("Location = ({0}, {1}, {2}), Moving = ({3}, {4}, {5})", x, y, z, x_moving, y_moving, z_moving);
+                //Console.WriteLine("Location = ({0}, {1}, {2}), Moving = ({3}, {4}, {5})", x, y, z, x_moving, y_moving, z_moving);
             }
             public override bool IsDataValid()
             {
                 return data_valid;
+            }
+            private byte locations;
+            public byte Locations
+            {
+                get
+                {
+                    return locations;
+                }
             }
 
             private Point3 currentPosition;
@@ -160,28 +175,31 @@ namespace Robot
             }
         }
 
+        /// <summary>
+        /// Gets the X, Y, Z Scale Factors for converting Inches to Stepper Ticks
+        /// X Axis: 12.5 inches per tooth, 15 tooth pulley, 100 phases per revolution, 32 ticks per phase
+        /// Y Axis: 12.5 inches per tooth, 15 tooth pulley, 100 phases per revolution, 32 ticks per phase
+        /// Z Axis: 32 threads per inch * 32 ticks per phase * 100 phases per revolution
+        /// </summary>
+        /// <returns></returns>
+        private static Vector3 ScaleFactors
+        {
+            get
+            {
+                return new Vector3(
+                12.5f * (1.0f / 15f) * 100f * 32.0f,
+                12.5f * (1.0f / 15f) * 100f * 32.0f,
+                32 * 32 * 100 * 1.0f);
+            }
+        }
+
         IRobotCommand currentCommand = null;
         IRobotCommand pendingCommand = null;
         SerialPortWrapper serial;
         Timer t;
 
-        bool isMoving = true;
-
-        enum SerialState
-        {
-            waiting_ping_reply,
-            waiting_values_reply,
-            waiting_speed_reply,
-            not_busy,
-            waiting_reply,
-        }
-
-        bool new_values = false;
-        bool new_speeds = false;
-
         int elapsedCounter = 0;
 
-        SerialState state = SerialState.not_busy;
         public Robot(SerialPortWrapper serial)
         {
             this.serial = serial;
@@ -193,21 +211,6 @@ namespace Robot
             t.Elapsed += new ElapsedEventHandler(t_Elapsed);
         }
 
-        Int32 deltax = 0;
-        Int32 deltay = 0;
-        Int32 deltaz = 0;
-
-        UInt16 speed = 1000;
-
-        public override void SetSpeed(int speed)
-        {
-            if (speed >= 16)
-            {
-                this.speed = (UInt16)speed;
-            }
-            this.new_speeds = true;
-        }
-
         void t_Elapsed(object sender, ElapsedEventArgs e)
         {
             t.Stop();
@@ -215,79 +218,6 @@ namespace Robot
             {
                 if (serial != null && serial.IsOpen)
                 {
-                    //if (state == SerialState.not_busy)
-                    //{
-
-                    //    if (pendingCommand != null)
-                    //    {
-                    //        currentCommand = pendingCommand;
-                    //        pendingCommand = null;
-                    //    }
-
-                    //    // If there's no pending command, send a get status command
-                    //    if (currentCommand == null)
-                    //    {
-                    //        currentCommand = new StatusCommand();
-                    //    }
-
-                    //    state = SerialState.waiting_reply;
-                    //    elapsedCounter = 0;
-                    //    serial.Transmit(currentCommand.GetSendBytes(), 0x21);
-
-
-
-                    
-                     
-                        
-                    //    //elapsedCounter = 0;
-                    //    //if (new_values)
-                    //    //{
-                    //    //    state = SerialState.waiting_values_reply;
-                    //    //    byte [] data = new byte [13];
-                    //    //    data[0] = 0x42; // Move Delta Command
-                    //    //    Console.WriteLine("Moving by = ({0}, {1}, {2})", deltax, deltay, deltaz);
-                        
-                    //    //    data[1] = (byte)(deltax & 0xFF);
-                    //    //    data[2] = (byte)((deltax >> 8) & 0xFF);
-                    //    //    data[3] = (byte)((deltax >> 16) & 0xFF);
-                    //    //    data[4] = (byte)((deltax >> 24) & 0xFF);
-
-                    //    //    data[5] = (byte)(deltay & 0xFF);
-                    //    //    data[6] = (byte)((deltay >> 8) & 0xFF);
-                    //    //    data[7] = (byte)((deltay >> 16) & 0xFF);
-                    //    //    data[8] = (byte)((deltay >> 24) & 0xFF);
-
-                    //    //    data[9]  = (byte)(deltaz & 0xFF);
-                    //    //    data[10] = (byte)((deltaz >> 8) & 0xFF);
-                    //    //    data[11] = (byte)((deltaz >> 16) & 0xFF);
-                    //    //    data[12] = (byte)((deltaz >> 24) & 0xFF);
-
-                    //    //    serial.Transmit(data, 0x21);
-
-                    //    //}
-                    //    //else if (new_speeds)
-                    //    //{
-                    //    //    Console.WriteLine("Speed = {0}, Add = {1}", speed, add);
-                    //    //    state = SerialState.waiting_speed_reply;
-                    //    //    byte [] data = new byte [4];
-                    //    //    data[0] = 0x22; // Set Speed Command
-                    //    //    data[1] = (byte)(speed & 0xFF);
-                    //    //    data[2] = (byte)((speed >> 8) & 0xFF);
-                    //    //    data[3] = add;
-                    //    //    serial.Transmit(data, 0x21);
-                    //    //}
-                    //    //else
-                    //    //{
-                    //    //    state = SerialState.waiting_ping_reply;
-                    //    //    serial.Transmit(new byte[] { 0x77 }, 0x21);
-                    //    //}
-                        
-
-                    //}
-                    //else
-                    //{
-
-
                     elapsedCounter++;
                     if ((elapsedCounter * 50) > (1000)) // More than 1 second to reply
                     {
@@ -300,15 +230,12 @@ namespace Robot
                         elapsedCounter = 0;
                     }
                 }
-                else
-                {
-                    state = SerialState.not_busy;
-                }
             }
             t.Start();
         }
 
-        // Serial Interface Callbacks
+        #region Serial Interface Callbacks
+        
         private void ReceiveDataError(byte err)
         {
             Console.WriteLine("Data Error: " + err);
@@ -335,14 +262,20 @@ namespace Robot
                     {
                         // See if there's any state information in the command used to 
                         // update location or other fields...
+                        byte locations = MaxLocations;
                         if (currentCommand is StatusCommand)
                         {
                             StatusCommand c = currentCommand as StatusCommand;
                             currentPosition = c.CurrentPosition;
-                            isMoving = c.IsMoving();
+                            locations = c.Locations;
                         }
-
-                        currentCommand = GetNextCommand();
+                        if (currentCommand is MoveCommand)
+                        {
+                            MoveCommand m = currentCommand as MoveCommand;
+                            locations = m.Locations;
+                        }
+                        
+                        currentCommand = GetNextCommand(locations);
 
                         elapsedCounter = 0;
                         serial.Transmit(currentCommand.GenerateCommand(), 0x21);
@@ -355,12 +288,25 @@ namespace Robot
             }
         }
 
-        private IRobotCommand GetNextCommand()
+        static byte MaxLocations
+        {
+            get
+            {
+                return 1;
+            }
+        }
+
+        #endregion
+
+        private IRobotCommand GetNextCommand(byte locations)
         {
             IRobotCommand nextCommand = null;
 
-            if (!isMoving)
+            if (locations < MaxLocations)
             {
+                // Ok to pass in another movement command
+
+                // TODO: rework this to use a local buffer...
                 if (onRobotReady != null)
                 {
                     onRobotReady(this, EventArgs.Empty);
@@ -369,7 +315,7 @@ namespace Robot
                 if (nextCommand != null)
                 {
                     pendingCommand = null;
-                    isMoving = true;
+                    locations = MaxLocations;
                 }
             }
 
@@ -381,156 +327,61 @@ namespace Robot
             return nextCommand;
         }
 
-        //public EventHandler onRobotReady = null;
-        
-        Point3 lastPosition = new Point3 (0, 0, 0);
         Point3 currentPosition = new Point3 (0, 0, 0);
-        Point3 destinationPosition = new Point3 (0, 0, 0);
 
-        //public override float GetProgress()
-        //{
-        //    float l1 = lastPosition.Length(destinationPosition);
-        //    float l2 = currentPosition.Length(destinationPosition);
-        //    return l2 / l1;
-        //}
-
-        // 25 stepper revolutions per inch * 32 ticks per phase * 24 phases per revolution
-        //private float xScaleFactor = 25 * 32 * 24 * 1.0f;
-
-        // 12.5 inches per tooth, 15 tooth pulley, 100 phases per revolution
-        private float xScaleFactor = 12.5f * (1.0f / 15f) * 100f * 32.0f;
-
-        // 32 threads per inch * 32 ticks per phase * 24 phases per revolution
-        //private float yScaleFactor = 32 * 32 * 24 * 1.0f;
-        private float yScaleFactor = 12.5f * (1.0f / 15f) * 100f * 32.0f;
-        
-
-        // 32 threads per inch * 32 ticks per phase * 100 phases per revolution
-        private float zScaleFactor = 32 * 32 * 100 * 1.0f;
-
-        public override Point3F GetPosition()
+        public override Vector3 GetPosition()
         {
-            Point3F currentPositionFloat = new Point3F(currentPosition.x / xScaleFactor - Offset.x, currentPosition.y / yScaleFactor - Offset.y, currentPosition.z / zScaleFactor - Offset.z);
-            return currentPositionFloat;
+            Vector3 posInches = Vector3.Divide(currentPosition.ToVector3(), ScaleFactors) - Offset;
+            return posInches;
         }
 
-        Point3F Offset = new Point3F(0, 0, 0);
-        public override void SetOffset(Point3F p)
+        Vector3 Offset = new Vector3(0, 0, 0);
+        public override void SetOffset(Vector3 p)
         {
             Offset = p;
         }
-        public override void GoTo(Point3F p, float tool_speed)
-        {
-            if (IsMoving())
-            {
-                throw new Exception("Cannot go to new position while already moving!");
-            }
-            Point3F cur = GetPosition();
-            Point3F delta = new Point3F(p.x - cur.x, p.y - cur.y, p.z - cur.z);
-            SetToGo(delta, tool_speed);
-        }
-        private void SetToGo(Point3F p, float tool_speed)
+        
+        Vector3 lastPosition = new Vector3(0, 0, 0);
+
+        /// <summary>
+        /// Run the router from the current position to the given position
+        /// </summary>
+        /// <param name="p">Destination location in inches</param>
+        /// <param name="inches_per_minute">Tool speed in inches per second</param>
+        public override void GoTo(Vector3 p, float inches_per_minute)
         {
             lock (thisLock)
             {
-                //p = new Point3F(p.x + Offset.x, p.y + Offset.y, p.z + Offset.z);
+                float inches = (lastPosition - p).Length;
+                
+                Point3 pointInt = new Point3(Vector3.Multiply(p, ScaleFactors));
 
-                Point3 pointInt = new Point3((int)(p.x * xScaleFactor), (int)(p.y * yScaleFactor), (int)(p.z * zScaleFactor));
-                if (IsMoving())
-                {
-                    throw new Exception("Cannot go to new position while already moving!");
-                }
-                if (pendingCommand != null)
-                {
-                    Console.WriteLine("Command is pending, cannot move to a new position!");
-                    return;
-                }
-                lock (destinationPosition)
-                {
-                    isMoving = true;
-                    float inches_per_minute = tool_speed;
-                    float inches = p.Length();
-                    // 16 uS per tick
-                    // length of l inches
-                    // inches/minute of inches_per_minute
-                    float time_seconds = 60 * inches / inches_per_minute;
-                    float num_ticks = time_seconds / 0.000016f;
+                UInt16 time_milliseconds = (UInt16)(1000 * 60 * inches / inches_per_minute);
 
-                    lastPosition = currentPosition;
-                    destinationPosition = currentPosition.Add(pointInt);
+                Console.WriteLine("Moving ({0}, {1}, {2}) to ({3}, {4}, {5}) in {6} milliseconds", 
+                    lastPosition.X,
+                    lastPosition.Y,
+                    lastPosition.Z,
+                    pointInt.x,
+                    pointInt.y,
+                    pointInt.z, 
+                    time_milliseconds);
+                    
+                lastPosition = p;
 
-                    Point3F delta = new Point3F(Math.Abs(pointInt.x), Math.Abs(pointInt.y), Math.Abs(pointInt.z));
-                    float max_delta = Math.Max(Math.Max(delta.x, delta.y), delta.z);
-                    delta = new Point3F(delta.x / max_delta, delta.y / max_delta, delta.z / max_delta);
-                    //delta = delta.Normalize();
-
-                    // num_ticks = distance * period
-                    float period_x = Math.Abs(num_ticks / pointInt.x);
-                    float period_y = Math.Abs(num_ticks / pointInt.y);
-                    float period_z = Math.Abs(num_ticks / pointInt.z);
-
-
-                    float min_period = Math.Min(Math.Min(period_x, period_y), period_z);
-                    Console.WriteLine("Min Period = {0}", min_period);
-                    delta = new Point3F(min_period / delta.x, min_period / delta.y, min_period / delta.z);
-
-                    float speed_scale = Math.Max(Math.Max(25.0f / delta.x, 15.0f / delta.y), 15.0f / delta.z);
-                    if (speed_scale > 1)
-                    {
-                        Console.WriteLine("Had to scale the speed by {0}", 1.0f / speed_scale);
-                        delta = new Point3F(delta.x * speed_scale, delta.y * speed_scale, delta.z * speed_scale);
-                    }
-
-
-                    UInt16 x_per = (UInt16)delta.x;
-                    UInt16 y_per = (UInt16)delta.y;
-                    UInt16 z_per = (UInt16)delta.z;
-                    if (delta.x > UInt16.MaxValue)
-                    {
-                        x_per = UInt16.MaxValue;
-                    }
-                    if (delta.y > UInt16.MaxValue)
-                    {
-                        y_per = UInt16.MaxValue;
-                    }
-                    if (delta.z > UInt16.MaxValue)
-                    {
-                        z_per = UInt16.MaxValue;
-                    }
-
-                    Console.WriteLine("Moving ({0}, {1}, {2}) to ({3}, {4}, {5})", lastPosition.x, lastPosition.y, lastPosition.z, destinationPosition.x, destinationPosition.y, destinationPosition.z);
-                    Console.WriteLine("Periods = ({0}, {1}, {2})", x_per, y_per, z_per);
-                    pendingCommand = new MoveCommand(destinationPosition, x_per, y_per, z_per);
-                    //commands.Add
-                }
+                pendingCommand = new MoveCommand(pointInt, time_milliseconds);
+                //commands.Add
             }
         }
 
         List<IRobotCommand> commands = new List<IRobotCommand>();
 
-        public override bool IsMoving()
-        {
-            return isMoving;
-        }
-
-        public override bool Ready()
-        {
-            if (serial.IsOpen)
-            {
-                if (pendingCommand == null)
-                {
-                    return !IsMoving();
-                }
-            }
-            return false;
-        }
-
         public void Reset()
         {
+            throw new NotImplementedException("Hey this isn't implemented yet or is broken or something dont use it yet");
             if (pendingCommand == null)
             {
                 pendingCommand = new ResetCommand();
-                isMoving = true;
             }
             else
             {

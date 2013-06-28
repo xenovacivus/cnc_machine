@@ -16,6 +16,7 @@ using Robot;
 using Serial;
 using Utilities;
 using Router;
+using OpenTK;
 
 namespace GUI
 {
@@ -511,26 +512,26 @@ namespace GUI
         void t_Tick(object sender, EventArgs e)
         {
             float toolSpeed = (float)this.toolSpeedUpDown.Value;
-            lock (hw)
-            {
-                if (hw.IsMoving())
-                {
-                }
-                else
-                {
-                    float x = (float)up_down_x.Value; // float.Parse(box_x.Text);
-                    float y = (float)up_down_y.Value; // float.Parse(box_y.Text);
-                    float z = (float)up_down_z.Value; // float.Parse(box_z.Text);
-                    if (last_x != x || last_y != y || last_z != z)
-                    {
-                        hw.SetOffset(new Point3F(-x, -y, -z));
-                        hw.GoTo(new Point3F(0, 0, 0), toolSpeed);
-                        last_x = x;
-                        last_y = y;
-                        last_z = z;
-                    }
-                }
-            }
+            //lock (hw)
+            //{
+            //    if (hw.IsMoving())
+            //    {
+            //    }
+            //    else
+            //    {
+            //        float x = (float)up_down_x.Value; // float.Parse(box_x.Text);
+            //        float y = (float)up_down_y.Value; // float.Parse(box_y.Text);
+            //        float z = (float)up_down_z.Value; // float.Parse(box_z.Text);
+            //        if (last_x != x || last_y != y || last_z != z)
+            //        {
+            //            hw.SetOffset(new Vector3(-x, -y, -z));
+            //            hw.GoTo(new Vector3(0, 0, 0), toolSpeed);
+            //            last_x = x;
+            //            last_y = y;
+            //            last_z = z;
+            //        }
+            //    }
+            //}
         }
 
         private void robot_button_Click(object sender, EventArgs e)

@@ -35,7 +35,7 @@ namespace Router
         public override void Execute(IHardware d)
         {
             Console.WriteLine("Going to " + toPoint);
-            Point3F p = new Point3F(toPoint.X, toPoint.Y, toPoint.Z);
+            Vector3 p = new Vector3(toPoint.X, toPoint.Y, toPoint.Z);
             d.GoTo(p, tool_speed);
         }
     }

@@ -59,13 +59,13 @@ namespace Router
                 if (commands.Count > 0)
                 {
                     RouterCommand c = commands[0];
+                    Console.WriteLine("Executing Command {0}", commands.Count);
                     commands.RemoveAt(0);
                     c.Execute(device);
                 }
                 else
                 {
-                    Point3F m = device.GetPosition();
-                    finalPosition = new Vector3(m.x, m.y, m.z);
+                    finalPosition = device.GetPosition();
                 }
             }
         }
@@ -76,8 +76,8 @@ namespace Router
 
             if (onRouterPositionUpdate != null)
             {
-                Point3F p = device.GetPosition();
-                PointF pos = new PointF(p.x * 1000, p.y * 1000);
+                Vector3 p = device.GetPosition();
+                PointF pos = new PointF(p.X * 1000, p.Y * 1000);
                 onRouterPositionUpdate(pos);
             }
             timer.Start();
@@ -97,29 +97,29 @@ namespace Router
             GL.PushMatrix();
 
             GL.Translate(0, 0, -.1);
-            Point3F p = device.GetPosition();
-            CoolDrawing.DrawCircle(12.5f, new OpenTK.Vector2(p.x * 1000, p.y * 1000), Color.DarkGreen);
+            Vector3 p = device.GetPosition();
+            CoolDrawing.DrawCircle(12.5f, new OpenTK.Vector2(p.X * 1000, p.Y * 1000), Color.DarkGreen);
 
             float w = 0;
             // Assume full bit penetrates at 20 mills depth
-            if (p.z < 0)
+            if (p.Z < 0)
             {
-                w = -p.z / .020f * 12.5f;
+                w = -p.Z / .020f * 12.5f;
                 if (w > 12.5f)
                 {
                     w = 12.5f;
                 }
-                CoolDrawing.DrawFilledCircle(w, new OpenTK.Vector2(p.x * 1000, p.y * 1000), Color.FromArgb(100, Color.OrangeRed));
-                if (p.z < -.020)
+                CoolDrawing.DrawFilledCircle(w, new OpenTK.Vector2(p.X * 1000, p.Y * 1000), Color.FromArgb(100, Color.OrangeRed));
+                if (p.Z < -.020)
                 {
-                    float t = (p.z + .020f) / .040f * 12.5f;
-                    CoolDrawing.DrawFilledCircle(t, new OpenTK.Vector2(p.x * 1000, p.y * 1000), Color.FromArgb(100, Color.DarkRed));
+                    float t = (p.Z + .020f) / .040f * 12.5f;
+                    CoolDrawing.DrawFilledCircle(t, new OpenTK.Vector2(p.X * 1000, p.Y * 1000), Color.FromArgb(100, Color.DarkRed));
                 }
             }
             else
             {
-                w = p.z / move_height * 12.5f;
-                CoolDrawing.DrawFilledCircle(w, new OpenTK.Vector2(p.x * 1000, p.y * 1000), Color.FromArgb(100, Color.LightGreen));
+                w = p.Z / move_height * 12.5f;
+                CoolDrawing.DrawFilledCircle(w, new OpenTK.Vector2(p.X * 1000, p.Y * 1000), Color.FromArgb(100, Color.LightGreen));
             }
 
             GL.PopMatrix();

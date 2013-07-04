@@ -52,6 +52,18 @@ namespace Router
             onRouterPositionUpdate = null;
         }
 
+        class PreviousPoint
+        {
+            public PreviousPoint(DateTime time, Vector3 location)
+            {
+                this.createTime = time;
+                this.location = location;
+            }
+            public DateTime createTime;
+            public Vector3 location;
+        }
+        List<PreviousPoint> previousPoints = new List<PreviousPoint>();
+
         void RobotReady(object o, EventArgs e)
         {
             lock (commands)
@@ -60,6 +72,11 @@ namespace Router
                 {
                     RouterCommand c = commands[0];
                     Console.WriteLine("Executing Command {0}", commands.Count);
+                    if (c is MoveTool)
+                    {
+                        MoveTool m = c as MoveTool;
+                        previousPoints.Add(new PreviousPoint(DateTime.Now, m.FinalPosition()));
+                    }
                     commands.RemoveAt(0);
                     c.Execute(device);
                 }
@@ -92,13 +109,45 @@ namespace Router
             }
         }
 
+        Vector3 lastPosition = new Vector3(0, 0, 0);
         public void Draw()
         {
             GL.PushMatrix();
 
-            GL.Translate(0, 0, -.1);
+            GL.Translate(0, 0, -0.1);
             Vector3 p = device.GetPosition();
+            if ((lastPosition - p).Length > float.Epsilon)
+            {
+                previousPoints.Add(new PreviousPoint(DateTime.Now, lastPosition));
+                lastPosition = p;
+            }
             CoolDrawing.DrawCircle(12.5f, new OpenTK.Vector2(p.X * 1000, p.Y * 1000), Color.DarkGreen);
+
+            for (int i = 0; i < commands.Count(); i++)
+            {
+                if (commands[i] is MoveTool)
+                {
+                    MoveTool m = commands[i] as MoveTool;
+                    Vector3 finalPosition = m.FinalPosition();
+                    CoolDrawing.DrawCircle(5.0f, new Vector2 (finalPosition.X * 1000, finalPosition.Y * 1000), Color.Blue);
+                }
+            }
+
+            for (int i = 0; i<previousPoints.Count(); i++)
+            {
+                double age = DateTime.Now.Subtract(previousPoints[i].createTime).TotalMilliseconds;
+                //Console.WriteLine("Age = {0}", age);
+                if (age > 5000)
+                {
+                    previousPoints.RemoveAt(i);
+                    i--;
+                }
+                else
+                {
+                    int alpha = (int)(255 - 255 * age / 5000.0f);
+                    CoolDrawing.DrawCircle(5.0f, new Vector2(previousPoints[i].location.X * 1000, previousPoints[i].location.Y * 1000), Color.FromArgb(alpha, Color.DarkGreen));
+                }
+            }
 
             float w = 0;
             // Assume full bit penetrates at 20 mills depth

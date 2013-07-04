@@ -52,6 +52,7 @@
     <Compile Include="IClickable.cs" />
     <Compile Include="IHasRouts.cs" />
     <Compile Include="IIsUseful.cs" />
+    <Compile Include="InvoluteGear.cs" />
     <Compile Include="MoveTool.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PulleyRout.cs" />

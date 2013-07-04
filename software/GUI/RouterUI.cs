@@ -53,7 +53,15 @@ namespace GUI
             
             userControl11.SelectedItemChanged += new EventHandler(userControl11_SelectedItemChanged);
             userControl11.AddObject(router);
+            //g1 = new InvoluteGear();
+            //g2 = new InvoluteGear();
+            //userControl11.AddObject(g1);
+            //g2.X = 122.5493f * 2;
+            //g2.Rotation = 180.0f / 11.0f + 0.425f;
+            //userControl11.AddObject(g2);
         }
+        //InvoluteGear g1;
+        //InvoluteGear g2;
 
         void propertyGrid_SelectedGridItemChanged(object sender, SelectedGridItemChangedEventArgs e)
         {
@@ -511,6 +519,11 @@ namespace GUI
         float last_z = 0;
         void t_Tick(object sender, EventArgs e)
         {
+            //float z = (float)up_down_z.Value; // float.Parse(box_z.Text);
+
+            //g1.Rotation = -z * 100;
+            //g2.Rotation = z * 100 + 180.0f / 11.0f + 0.425f;
+
             float toolSpeed = (float)this.toolSpeedUpDown.Value;
             //lock (hw)
             //{

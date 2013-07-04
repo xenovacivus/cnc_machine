@@ -48,9 +48,9 @@ namespace Router
             set
             {
                 width = value;
-                if (width < 1)
+                if (width < 1f)
                 {
-                    width = 1;
+                    width = 1f;
                 }
                 HasChanged = true;
             }

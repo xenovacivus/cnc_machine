@@ -38,9 +38,9 @@ namespace Utilities
             GL.Color4(color);
 
             GL.Begin(BeginMode.LineLoop);
-            for (int x = 0; x < 20; x++)
+            for (int x = 0; x < 60; x++)
             {
-                GL.Vertex2(Math.Sin(Math.PI * x / 10.0f) * radius, Math.Cos(Math.PI * x / 10.0f) * radius);
+                GL.Vertex2(Math.Sin(Math.PI * x * 6.0f / 180.0f) * radius, Math.Cos(Math.PI * x * 6.0f / 180.0f) * radius);
             }
             GL.End();
 

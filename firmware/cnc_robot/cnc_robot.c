@@ -12,6 +12,8 @@
 #include "serial\Serial.h"
 #include "clksys_driver.h"
 #include "axis.h"
+#include "location.h"
+#include "buffers/ring.h"
 
 //#include <string.h>
 //#include <stdio.h>
@@ -35,13 +37,8 @@ uint8_t v[32] = {0,3,6,9,12,15,18,20,23,25,27,28,30,31,31,32,32,32,31,31,30,28,2
 volatile int32_t location = 0;
 volatile int32_t delta = 0;
 
-typedef struct
-{
-	uint16_t time;
-	int32_t x;
-	int32_t y;
-	int32_t z;
-} Location_t;
+volatile Location_t locations[4];
+volatile RingBuffer location_buffer;
 
 volatile Location_t nextLocation;
 volatile uint8_t location_buffer_size = 0;
@@ -131,6 +128,7 @@ void UpdateAxis (volatile AXIS_t * axis)
 		UpdateAxisOutput(axis, (axis->location + add) & 0xFF);
 	}
 }
+volatile uint8_t buffer_lock = 0;
 
 void OnAxisTimerOverflow ()
 {
@@ -139,15 +137,25 @@ void OnAxisTimerOverflow ()
 	if (time == 0)
 	{
 		// Nothing to do
-		if(location_buffer_size > 0)
+		if (!buffer_lock && !RingBufferIsEmpty(&location_buffer))
 		{
-			x_axis.delta = nextLocation.x - x_axis.location;
-			y_axis.delta = nextLocation.y - y_axis.location;
-			z_axis.delta = nextLocation.z - z_axis.location;
-			time = nextLocation.time;
-			ovf_count = 1;
-			location_buffer_size--;
+			Location_t next = RingBufferGet(&location_buffer);
+			x_axis.delta = next.x - x_axis.location;
+			y_axis.delta = next.y - y_axis.location;
+			z_axis.delta = next.z - z_axis.location;
+			time = next.time;
+			ovf_count = 0;
 		}
+		//if(location_buffer_size > 0)
+		//{
+		//	x_axis.delta = nextLocation.x - x_axis.location;
+		//	y_axis.delta = nextLocation.y - y_axis.location;
+		//	z_axis.delta = nextLocation.z - z_axis.location;
+		//	time = nextLocation.time;
+		//	ovf_count = 1;
+		//	location_buffer_size--;
+		//}
+		
 		//else
 		//{
 		//	x_axis.delta = 0;
@@ -161,10 +169,18 @@ void OnAxisTimerOverflow ()
 		UpdateAxis (&y_axis);
 		UpdateAxis (&z_axis);
 	
-		if (ovf_count == time)
+		if (ovf_count >= time)
 		{
 			time = 0;
-			ovf_count = 0;
+			if (!buffer_lock && !RingBufferIsEmpty(&location_buffer))
+			{
+				Location_t next = RingBufferGet(&location_buffer);
+				x_axis.delta = next.x - x_axis.location;
+				y_axis.delta = next.y - y_axis.location;
+				z_axis.delta = next.z - z_axis.location;
+				time = next.time;
+				ovf_count = 0;
+			}
 			//if(location_buffer_size > 0)
 			//{
 			//	x_axis.delta = nextLocation.x - x_axis.location;
@@ -232,6 +248,8 @@ int main(void)
 {
 	InitClock();
 	SerialInit();
+	
+	RingBufferInit(&location_buffer, 4, locations);
 	
 	PORTC.DIRSET = 0xF3;
 	PORTE.DIRSET = 0xFF;
@@ -384,7 +402,14 @@ int main(void)
 						status_bits |= 0x04;
 					}
 					s->transmit_data[13] = status_bits;
-					s->transmit_data[14] = location_buffer_size;
+					
+					//step_timer->INTCTRLA &= ~TC1_OVFINTLVL_gm; // Disable the step timer
+					buffer_lock = 1;
+					s->transmit_data[14] = RingBufferCount(&location_buffer);
+					buffer_lock = 0;
+					//step_timer->INTCTRLA |= TC_OVFINTLVL_LO_gc; // Enable the step timer
+					
+					//s->transmit_data[14] = location_buffer_size;
 					
 					SerialTransmit (s, 0x00, 15); // Transmit to master device
 					break;
@@ -402,16 +427,24 @@ int main(void)
 					l.z = decode_uint32_t(&(s->receive_data[11]));
 					
 					// Add the new location to the buffer
-					step_timer->INTCTRLA &= ~TC1_OVFINTLVL_gm; // Disable the step timer
-					if (location_buffer_size < 1)
+					//step_timer->INTCTRLA &= ~TC1_OVFINTLVL_gm; // Disable the step timer
+					
+					buffer_lock = 1;
+					if (!RingBufferIsFull(&location_buffer))
 					{
-						nextLocation = l;
-						location_buffer_size++;
+						RingBufferAdd(&location_buffer, l);
 					}
-					step_timer->INTCTRLA |= TC_OVFINTLVL_LO_gc; // Enable the step timer
+					//if (location_buffer_size < 1)
+					//{
+					//	nextLocation = l;
+					//	location_buffer_size++;
+					//}
+					s->transmit_data[1] = RingBufferCount(&location_buffer);
+					buffer_lock = 0;
+					//step_timer->INTCTRLA |= TC_OVFINTLVL_LO_gc; // Enable the step timer
 					
 					s->transmit_data[0] = 0x32;
-					s->transmit_data[1] = location_buffer_size;
+					//s->transmit_data[1] = location_buffer_size;
 					SerialTransmit(s, 0x00, 2);
 					break;
 				}

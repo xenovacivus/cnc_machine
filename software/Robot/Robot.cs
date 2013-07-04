@@ -292,7 +292,7 @@ namespace Robot
         {
             get
             {
-                return 1;
+                return 4;
             }
         }
 
@@ -352,24 +352,34 @@ namespace Robot
         {
             lock (thisLock)
             {
-                float inches = (lastPosition - p).Length;
+                Vector3 delta = lastPosition - p;
+                delta.Z = delta.Z * 10; // Z axis moves slower
+                float inches = delta.Length;
                 
                 Point3 pointInt = new Point3(Vector3.Multiply(p, ScaleFactors));
 
                 UInt16 time_milliseconds = (UInt16)(1000 * 60 * inches / inches_per_minute);
 
-                Console.WriteLine("Moving ({0}, {1}, {2}) to ({3}, {4}, {5}) in {6} milliseconds", 
-                    lastPosition.X,
-                    lastPosition.Y,
-                    lastPosition.Z,
-                    pointInt.x,
-                    pointInt.y,
-                    pointInt.z, 
-                    time_milliseconds);
-                    
-                lastPosition = p;
+                if (time_milliseconds > 0)
+                {
 
-                pendingCommand = new MoveCommand(pointInt, time_milliseconds);
+                    Console.WriteLine("Moving ({0}, {1}, {2}) to ({3}, {4}, {5}) in {6} milliseconds",
+                        lastPosition.X,
+                        lastPosition.Y,
+                        lastPosition.Z,
+                        pointInt.x,
+                        pointInt.y,
+                        pointInt.z,
+                        time_milliseconds);
+
+                    lastPosition = p;
+
+                    pendingCommand = new MoveCommand(pointInt, time_milliseconds);
+                }
+                else
+                {
+                    Console.WriteLine("Ignoring command with time of 0");
+                }
                 //commands.Add
             }
         }

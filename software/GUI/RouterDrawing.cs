@@ -126,6 +126,7 @@ namespace GUI
                     c.MenuItems.Add (new MenuItem ("Add Rout", new EventHandler (AddRoutClick)));
                     c.MenuItems.Add(new MenuItem("Add Circle", new EventHandler(AddCircleClick)));
                     c.MenuItems.Add(new MenuItem("Add Pulley", new EventHandler(AddPulleyClick)));
+                    c.MenuItems.Add(new MenuItem("Add Involute Gear", new EventHandler(AddInvoluteGearClick)));
                     c.MenuItems.Add(new MenuItem("Reset View", new EventHandler(ResetViewClick)));
                     c.MenuItems.Add("Item 1");
                     c.MenuItems.Add("Item 2");
@@ -134,6 +135,12 @@ namespace GUI
                 }
                 isMouseLDown = false;
                 isMouseRDown = false;
+            }
+
+            private void AddInvoluteGearClick(object sender, EventArgs e)
+            {
+                InvoluteGear r = new InvoluteGear(mouseDownLocation, 100);
+                parent.AddObject(r);
             }
 
             void AddRoutClick(object sender, EventArgs e)
@@ -419,10 +426,6 @@ namespace GUI
 
                 GL.Color3(Color.Black);
 
-
-
-
-
                 //GL.Color3(Color.Black);
                 //DrawCrosshairs(mouseLocation, gridScale);
                 GL.Color3(Color.LightGray);
@@ -439,7 +442,7 @@ namespace GUI
 
                 //for (int f = 0; f < 10; f++)
                 //{
-                    for (int i = 0; i < objects.Count; i++)
+                    for (int i = objects.Count()-1; i >= 0; i--)
                     {
                         IIsUseful useful = objects[i] as IIsUseful;
                         if (useful != null && !useful.IsUseful())

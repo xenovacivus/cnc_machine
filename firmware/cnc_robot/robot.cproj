@@ -121,6 +121,12 @@
     <Compile Include="Axis.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="buffers\ring.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="buffers\ring.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="clksys_driver.c">
       <SubType>compile</SubType>
     </Compile>
@@ -128,6 +134,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Axis.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="location.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="serial\Serial.c">
@@ -147,6 +156,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="buffers" />
     <Folder Include="serial" />
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />

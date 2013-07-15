@@ -71,6 +71,7 @@
     <Compile Include="COMPortForm.Designer.cs">
       <DependentUpon>COMPortForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ObjLoader.cs" />
     <Compile Include="RouterUI.cs">
       <SubType>Form</SubType>
     </Compile>

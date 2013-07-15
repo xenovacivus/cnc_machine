@@ -18,38 +18,32 @@ namespace Router
         PointF actualPosition;
         IHardware device = null;
         private List<RouterCommand> commands;
-        System.Timers.Timer timer;
 
         Vector3 finalPosition = new Vector3(0, 0, 0);
 
-        public delegate void NewRouterPositionDelegate (PointF newPoint);
-
-        NewRouterPositionDelegate onRouterPositionUpdate;
-        public NewRouterPositionDelegate OnRouterPositionUpdate
-        {
-            get
-            {
-                return onRouterPositionUpdate;
-            }
-            set
-            {
-                onRouterPositionUpdate = value;
-            }
-        }
-
         public Router(IHardware d)
         {
-            timer = new System.Timers.Timer();
-            timer.Interval = 50;
-            timer.Elapsed += new System.Timers.ElapsedEventHandler(timer_Elapsed);
-            timer.Start();
-
             commands = new List<RouterCommand>();
             device = d;
             d.onRobotReady += new EventHandler(this.RobotReady);
+            d.onPositionUpdate += new EventHandler(RouterPositionUpdate);
             currentPosition = new PointF(0, 0);
             actualPosition = new PointF(0, 0);
-            onRouterPositionUpdate = null;
+        }
+
+        void RouterPositionUpdate(object o, EventArgs e)
+        {
+            if (o is IHardware)
+            {
+                IHardware hw = o as IHardware;
+                Vector3 position = hw.GetPosition();
+                //Console.WriteLine("Router New Position = " + position);
+                if ((lastPosition - position).Length > float.Epsilon)
+                {
+                    previousPoints.Add(new PreviousPoint(DateTime.Now, lastPosition));
+                    lastPosition = position;
+                }
+            }
         }
 
         class PreviousPoint
@@ -72,11 +66,6 @@ namespace Router
                 {
                     RouterCommand c = commands[0];
                     Console.WriteLine("Executing Command {0}", commands.Count);
-                    if (c is MoveTool)
-                    {
-                        MoveTool m = c as MoveTool;
-                        previousPoints.Add(new PreviousPoint(DateTime.Now, m.FinalPosition()));
-                    }
                     commands.RemoveAt(0);
                     c.Execute(device);
                 }
@@ -85,19 +74,6 @@ namespace Router
                     finalPosition = device.GetPosition();
                 }
             }
-        }
-
-        void timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            timer.Stop();
-
-            if (onRouterPositionUpdate != null)
-            {
-                Vector3 p = device.GetPosition();
-                PointF pos = new PointF(p.X * 1000, p.Y * 1000);
-                onRouterPositionUpdate(pos);
-            }
-            timer.Start();
         }
 
         public void AddRouterCommands(RouterCommand[] router_commands)
@@ -116,11 +92,7 @@ namespace Router
 
             GL.Translate(0, 0, -0.1);
             Vector3 p = device.GetPosition();
-            if ((lastPosition - p).Length > float.Epsilon)
-            {
-                previousPoints.Add(new PreviousPoint(DateTime.Now, lastPosition));
-                lastPosition = p;
-            }
+
             CoolDrawing.DrawCircle(12.5f, new OpenTK.Vector2(p.X * 1000, p.Y * 1000), Color.DarkGreen);
 
             for (int i = 0; i < commands.Count(); i++)
@@ -136,7 +108,6 @@ namespace Router
             for (int i = 0; i<previousPoints.Count(); i++)
             {
                 double age = DateTime.Now.Subtract(previousPoints[i].createTime).TotalMilliseconds;
-                //Console.WriteLine("Age = {0}", age);
                 if (age > 5000)
                 {
                     previousPoints.RemoveAt(i);
@@ -178,11 +149,8 @@ namespace Router
         {
             lock (commands)
             {
-                //bool timer_running = timer.Enabled;
-                //timer.Enabled = false;
                 commands.Add(r);
                 finalPosition = r.FinalPosition();
-                //timer.Enabled = timer_running;
             }
         }
 
@@ -207,6 +175,7 @@ namespace Router
                 }
             }
         }
+        
         [DescriptionAttribute ("Moving speed (inches per minute")]
         [DisplayNameAttribute ("Moving Speed")]
         public float MoveSpeed
@@ -214,6 +183,7 @@ namespace Router
             get { return move_speed; }
             set { if (value > 0) { move_speed = value; } }
         }
+        
         [DescriptionAttribute ("Height above zero to while moving between cuts")]
         [DisplayNameAttribute ("Move Height")]
         public float MoveHeight
@@ -221,6 +191,7 @@ namespace Router
             get { return move_height; }
             set { move_height = value; }
         }
+        
         [DescriptionAttribute ("Maximum cut depth in mills")]
         [DisplayNameAttribute ("Max Cut Depth")]
         public float MaxCutDepth
@@ -232,7 +203,6 @@ namespace Router
 
         public void RoutPath(Rout r, bool backwards)
         {
-
             List<Vector2> mine = new List<Vector2>();
             foreach (Vector2 p in (r.Points))
             {

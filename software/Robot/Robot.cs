@@ -106,6 +106,10 @@ namespace Robot
                             StatusCommand c = currentCommand as StatusCommand;
                             currentPosition = Vector3.Divide (c.CurrentPosition.ToVector3(), ScaleFactors);
                             locations = c.Locations;
+                            if (onPositionUpdate != null)
+                            {
+                                onPositionUpdate(this, EventArgs.Empty);
+                            }
                         }
                         if (currentCommand is MoveCommand)
                         {

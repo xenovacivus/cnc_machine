@@ -33,10 +33,7 @@
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.addRout = new System.Windows.Forms.ToolStripMenuItem();
-            this.saveButton = new System.Windows.Forms.Button();
-            this.openButton = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
-            this.tool = new System.Windows.Forms.Button();
             this.routMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.completeRout = new System.Windows.Forms.ToolStripMenuItem();
             this.insertMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -50,7 +47,6 @@
             this.robot_button = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
             this.propertyGrid = new System.Windows.Forms.PropertyGrid();
             this.routBackwards = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -70,6 +66,7 @@
             this.radioButton2 = new System.Windows.Forms.RadioButton();
             this.radioButton1 = new System.Windows.Forms.RadioButton();
             this.userControl11 = new GUI.RouterDrawing();
+            this.button6 = new System.Windows.Forms.Button();
             this.contextMenuStrip1.SuspendLayout();
             this.routMenu.SuspendLayout();
             this.insertMenu.SuspendLayout();
@@ -89,33 +86,12 @@
             this.addRout});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
             this.contextMenuStrip1.Size = new System.Drawing.Size(125, 26);
-            this.contextMenuStrip1.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuStrip1_Opening);
             // 
             // addRout
             // 
             this.addRout.Name = "addRout";
             this.addRout.Size = new System.Drawing.Size(124, 22);
             this.addRout.Text = "Add Rout";
-            // 
-            // saveButton
-            // 
-            this.saveButton.Location = new System.Drawing.Point(6, 48);
-            this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(54, 23);
-            this.saveButton.TabIndex = 39;
-            this.saveButton.Text = "save";
-            this.saveButton.UseVisualStyleBackColor = true;
-            this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
-            // 
-            // openButton
-            // 
-            this.openButton.Location = new System.Drawing.Point(66, 48);
-            this.openButton.Name = "openButton";
-            this.openButton.Size = new System.Drawing.Size(54, 23);
-            this.openButton.TabIndex = 40;
-            this.openButton.Text = "open";
-            this.openButton.UseVisualStyleBackColor = true;
-            this.openButton.Click += new System.EventHandler(this.openButton_Click);
             // 
             // button2
             // 
@@ -126,16 +102,6 @@
             this.button2.Text = "Run";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.RoutAllClick);
-            // 
-            // tool
-            // 
-            this.tool.Location = new System.Drawing.Point(6, 77);
-            this.tool.Name = "tool";
-            this.tool.Size = new System.Drawing.Size(152, 23);
-            this.tool.TabIndex = 53;
-            this.tool.Text = "Tool Down";
-            this.tool.UseVisualStyleBackColor = true;
-            this.tool.Click += new System.EventHandler(this.tool_Click);
             // 
             // routMenu
             // 
@@ -240,16 +206,6 @@
             this.button5.Text = "open gcode";
             this.button5.UseVisualStyleBackColor = true;
             this.button5.Click += new System.EventHandler(this.button5_Click);
-            // 
-            // button6
-            // 
-            this.button6.Location = new System.Drawing.Point(6, 77);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(95, 23);
-            this.button6.TabIndex = 67;
-            this.button6.Text = "run gcode";
-            this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
             // propertyGrid
             // 
@@ -425,7 +381,6 @@
             this.groupBox2.Controls.Add(this.button3);
             this.groupBox2.Controls.Add(this.button2);
             this.groupBox2.Controls.Add(this.routBackwards);
-            this.groupBox2.Controls.Add(this.tool);
             this.groupBox2.Location = new System.Drawing.Point(12, 179);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(164, 131);
@@ -435,10 +390,8 @@
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.button5);
-            this.groupBox3.Controls.Add(this.saveButton);
-            this.groupBox3.Controls.Add(this.openButton);
             this.groupBox3.Controls.Add(this.button6);
+            this.groupBox3.Controls.Add(this.button5);
             this.groupBox3.Location = new System.Drawing.Point(12, 316);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Size = new System.Drawing.Size(164, 134);
@@ -505,6 +458,16 @@
             this.userControl11.TabIndex = 68;
             this.userControl11.VSync = false;
             // 
+            // button6
+            // 
+            this.button6.Location = new System.Drawing.Point(6, 48);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(152, 23);
+            this.button6.TabIndex = 67;
+            this.button6.Text = "open .obj";
+            this.button6.UseVisualStyleBackColor = true;
+            this.button6.Click += new System.EventHandler(this.button6_Click);
+            // 
             // RouterUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -543,10 +506,7 @@
         private System.ComponentModel.BackgroundWorker backgroundWorker1;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripMenuItem addRout;
-        private System.Windows.Forms.Button saveButton;
-        private System.Windows.Forms.Button openButton;
         private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.Button tool;
         private System.Windows.Forms.ContextMenuStrip routMenu;
         private System.Windows.Forms.ToolStripMenuItem completeRout;
         private System.Windows.Forms.ContextMenuStrip insertMenu;
@@ -560,7 +520,6 @@
         private System.Windows.Forms.Button robot_button;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button5;
-        private System.Windows.Forms.Button button6;
         private RouterDrawing userControl11;
         private System.Windows.Forms.PropertyGrid propertyGrid;
         private System.Windows.Forms.CheckBox routBackwards;
@@ -580,6 +539,7 @@
         private System.Windows.Forms.RadioButton radioButton1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.NumericUpDown toolSpeedUpDown;
+        private System.Windows.Forms.Button button6;
 
     }
 }

@@ -11,5 +11,6 @@ namespace Robot
         public EventHandler onRobotReady;
         public abstract Vector3 GetPosition();
         public abstract void GoTo(Vector3 p, float tool_speed);
+        public EventHandler onPositionUpdate;
     }
 }

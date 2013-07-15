@@ -16,17 +16,6 @@ namespace Router
             lasty = 0;
             lastz = 0;
             linear_routs = new List<Rout>();
-            move_tool_commands = new List<MoveTool>();
-        }
-
-        
-        float tool_speed = 2.0f; // 2 inches per minute default
-
-        List<MoveTool> move_tool_commands;
-        public RouterCommand[] GetRouterCommands()
-        {
-            Console.WriteLine("Returning " + move_tool_commands.Count() + " Tool Moves");
-            return move_tool_commands.ToArray();
         }
         
         List<Rout> linear_routs;
@@ -41,13 +30,6 @@ namespace Router
         {
             foreach (string s in lines)
             {
-                //Console.WriteLine(s);
-                //
-                //                "407-2-5555", 
-                //};
-                //
-                //string sPattern = "^\\d{3}-\\d{3}-\\d{4}$";
-                //string pattern = "^G(\\d+)";
                 Regex r = new Regex("^G(?<G_VALUE>\\d+)");
                 if (r.IsMatch (s))
                 {
@@ -58,16 +40,10 @@ namespace Router
                     {
                         // Rapid Positioning, go to (x, y, z) as fast as possible
                         Vector3 fromPoint = new Vector3(lastx, lasty, lastz);
-                        //Point3F fromPoint = new Point3F(lastx, lasty, lastz);
                         GetFloat(s, "X", ref lastx);
                         GetFloat(s, "Y", ref lasty);
                         GetFloat(s, "Z", ref lastz);
                         Vector3 toPoint = new Vector3(lastx, lasty, lastz);
-                        //Point3F toPoint = new Point3F(lastx, lasty, lastz);
-
-                        //Vector3 p = new Vector3(toPoint.X, toPoint.Y, toPoint.Z);
-                        MoveTool move_tool = new MoveTool(toPoint, tool_speed);
-                        move_tool_commands.Add(move_tool);
 
                         Rout rout = new Rout();
                         rout.just_moving = true;
@@ -87,12 +63,6 @@ namespace Router
                         Vector3 toPoint = new Vector3(lastx, lasty, lastz);
                         
                         Rout rout = new Rout();
-                        //MoveTool m = new MoveTool (
-
-                        //Vector3 p = new Vector3(toPoint.x, toPoint.y, toPoint.z);
-                        MoveTool move_tool = new MoveTool(toPoint, tool_speed);
-                        
-                        move_tool_commands.Add(move_tool);
 
                         rout.Width = 20;
                         rout.Points = new List<Vector2>(new Vector2[] { new Vector2(fromPoint.X * 1000, fromPoint.Y * 1000), new Vector2(toPoint.X * 1000, toPoint.Y * 1000) });

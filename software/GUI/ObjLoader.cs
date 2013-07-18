@@ -21,13 +21,91 @@ namespace GUI
             public Face()
             {
             }
+            public Vector3 Normal
+            {
+                get
+                {
+                    if (vertices.Count() >= 3)
+                    {
+                        Vector3 v = Vector3.Cross(vertices[1] - vertices[2], vertices[0] - vertices[1]);
+                        v.Normalize();
+                        return v;
+                    }
+                    return new Vector3(0, 1, 0);
+                }
+            }
         }
         List<Face> faces;
+
+        public class Plane
+        {
+            public Vector3 point = new Vector3 (0, 0, 0);
+            public Vector3 normal = new Vector3(1, 0, 0);
+            public float Distance(Vector3 p)
+            {
+                float scalar = Vector3.Dot(normal, point);
+                return Vector3.Dot(normal, p) - scalar;
+            }
+        }
+
+        private void Slice(Face f, Plane p)
+        {
+            if ((f.Normal - p.normal).Length < float.Epsilon)
+            {
+                // No intersection
+            }
+            else
+            {
+                float scalar = Vector3.Dot(p.normal, p.point);
+                List<Vector3> intersectPoints = new List<Vector3>();
+                for (int i = 0; i < f.vertices.Count(); i++)
+                {
+                    Vector3 v1 = f.vertices[i];
+                    Vector3 v2 = f.vertices[(i + 1) % f.vertices.Count()];
+                    float d1 = p.Distance(v1);
+                    float d2 = p.Distance(v2);
+                    if (d1 * d2 < float.Epsilon)
+                    {
+                        d1 = (float)(Math.Abs(d1));
+                        d2 = (float)(Math.Abs(d2));
+                        // One negative, one positive
+                        float total = d1 + d2;
+                        Vector3 result = (v1 * d2 + v2 * d1) / total;
+                        intersectPoints.Add(result);
+                    }
+                    else
+                    {
+                        if (Math.Abs(d1) < float.Epsilon)
+                        {
+                            intersectPoints.Add(v1);
+                        }
+                        if (Math.Abs(d2) < float.Epsilon)
+                        {
+                            intersectPoints.Add(v2);
+                        }
+                    }
+                }
+                if (intersectPoints.Count() >= 2)
+                {
+                    GL.Begin(BeginMode.LineLoop);
+                    foreach (Vector3 v in intersectPoints)
+                    {
+                        GL.Vertex3(v);
+
+                    } GL.End();
+                }
+            }
+        }
 
         public ObjLoader()
         {
             vertices = new List<Vector3>();
             faces = new List<Face>();
+            //Face f = new Face();
+            //f.vertices.Add(new Vector3(0, 0, 0));
+            //f.vertices.Add(new Vector3(0, 1, 0));
+            //f.vertices.Add(new Vector3(0, 1, -1));
+            //f.vertices.Add(new Vector3(0, 0, -1));
         }
 
         public void LoadObj(string filepath)
@@ -50,7 +128,7 @@ namespace GUI
                     float x = float.Parse(m.Groups["x"].Value);
                     float y = float.Parse(m.Groups["y"].Value);
                     float z = float.Parse(m.Groups["z"].Value);
-                    vertices.Add(new Vector3 (x, y, z));
+                    vertices.Add(new Vector3 (x, z, y) * 1000);
                     //Console.WriteLine("Vertex Found: {0}", v);
                 }
                 else if (faceRegex.IsMatch(s))
@@ -102,15 +180,47 @@ namespace GUI
 
         public void Draw()
         {
-            GL.Color3(Color.DarkGreen);
+            //GL.Color3(Color.DarkGreen);
             foreach (Face f in this.faces)
             {
-                GL.Begin(BeginMode.TriangleFan);
+                Vector3 normal = f.Normal;
+
+                //GL.Color3(Color.White);
+                //GL.Begin(BeginMode.TriangleFan);
+                //foreach (Vector3 v in f.vertices)
+                //{
+                //    GL.Normal3(normal);
+                //    GL.Vertex3(v);
+                //}
+                //GL.End();
+
+                GL.Color3(Color.LightGray);
+                GL.Begin(BeginMode.LineLoop);
                 foreach (Vector3 v in f.vertices)
                 {
                     GL.Vertex3(v);
                 }
                 GL.End();
+
+                
+                for (int i = 0; i < 1000; i += 500)
+                {
+                //int i = (int)((DateTime.Now.Ticks &  Int32.MaxValue) / 50000) % 1000;
+                    
+                GL.Color3(Color.Blue);
+                Plane p = new Plane();
+                p.point = new Vector3(0, 0, i);
+                p.normal = new Vector3(0, 0, 1);
+                Slice(f, p);
+                //GL.Color3(Color.Green);
+                //p.normal = new Vector3(0, 1, 0);
+                //p.point = new Vector3(0, -i, 0);
+                //Slice(f, p);
+                //GL.Color3(Color.Red);
+                //p.normal = new Vector3(1, 0, 0);
+                //p.point = new Vector3(i, 0, 0);
+                //Slice(f, p);
+                }
             }
         }
     }

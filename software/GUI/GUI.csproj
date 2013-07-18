@@ -86,6 +86,7 @@
     <Compile Include="RouterDrawing.Designer.cs">
       <DependentUpon>RouterDrawing.cs</DependentUpon>
     </Compile>
+    <Compile Include="Viewport3d.cs" />
     <EmbeddedResource Include="COMPortForm.resx">
       <DependentUpon>COMPortForm.cs</DependentUpon>
     </EmbeddedResource>

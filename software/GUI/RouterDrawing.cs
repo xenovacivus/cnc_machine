@@ -421,7 +421,7 @@ namespace GUI
                 //GL.Ortho(viewport.Box.Left, viewport.Box.Right, viewport.Box.Bottom, viewport.Box.Top, 1, -1);
 
                 // 3D Setup
-                Matrix4 perspective = OpenTK.Matrix4.CreatePerspectiveFieldOfView(MathHelper.PiOver4, aspect, 0.1f, 10000.0f);
+                Matrix4 perspective = OpenTK.Matrix4.CreatePerspectiveFieldOfView(OpenTK.MathHelper.PiOver4, aspect, 0.1f, 10000.0f);
                 GL.LoadMatrix(ref perspective);
 
                 GL.DepthMask(true);
@@ -450,7 +450,7 @@ namespace GUI
 
                 GL.LoadMatrix(ref viewport.viewMatrix);
 
-                viewport.DrawAxis();
+                viewport.Draw();
                 GL.Scale(.001, .001, .001);
                 GL.Enable(EnableCap.Normalize);
                 //GL.Translate(0, 0, -1000);
@@ -581,7 +581,8 @@ namespace GUI
         {
             if (o != null)
             {
-                this.objects.Add(o);
+                viewport.AddObject(o);
+                //this.objects.Add(o);
             }
         }
 

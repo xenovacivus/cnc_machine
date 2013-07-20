@@ -50,6 +50,7 @@
     <Compile Include="CircleRout.cs" />
     <Compile Include="GCode.cs" />
     <Compile Include="IClickable.cs" />
+    <Compile Include="IClickable3D.cs" />
     <Compile Include="IHasRouts.cs" />
     <Compile Include="IIsUseful.cs" />
     <Compile Include="InvoluteGear.cs" />

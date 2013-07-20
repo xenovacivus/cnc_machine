@@ -46,6 +46,7 @@
     <Compile Include="CoolDrawing.cs" />
     <Compile Include="IOpenGLDrawable.cs" />
     <Compile Include="LineMath.cs" />
+    <Compile Include="MathHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Vector3i.cs" />
   </ItemGroup>

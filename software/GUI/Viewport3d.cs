@@ -8,10 +8,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Utilities;
 
 namespace GUI
 {
-    public class Viewport3d : IClickable
+    public class Viewport3d : IClickable, IOpenGLDrawable
     {
         RouterDrawing parent;
         //Box2 viewPort = new Box2(0, 100, 100, 0);
@@ -20,6 +21,8 @@ namespace GUI
         bool isMouseRDown = false;
         bool wasMouseDragged = false;
 
+        List<Object> objects = new List<Object>();
+
         public Matrix4 viewMatrix = Matrix4.CreateTranslation(0, 0, -5);
 
         public Viewport3d(RouterDrawing parent)
@@ -27,6 +30,18 @@ namespace GUI
             this.parent = parent;
             parent.Resize += new EventHandler(parent_Resize);
             viewMatrix = Matrix4.Mult(Matrix4.CreateRotationX(-OpenTK.MathHelper.PiOver4), viewMatrix);
+            
+            ObjLoader l = new ObjLoader();
+            ObjLoader.Face f = new ObjLoader.Face();
+            f.vertices.Add(new Vector3(0, 0, 0));
+            f.vertices.Add(new Vector3(0, 1000, 0));
+            f.vertices.Add(new Vector3(1000, 1000, 0));
+            f.vertices.Add(new Vector3(1000, 2000, 0));
+            f.vertices.Add(new Vector3(2000, 2000, 0));
+            f.vertices.Add(new Vector3(2000, 0, 0));
+            //f.vertices.Add(new Vector3(1000, 0, 0));
+            l.AddFace(f);
+            this.objects.Add(l);
         }
 
         void parent_Resize(object sender, EventArgs e)
@@ -148,6 +163,16 @@ namespace GUI
             }
         }
 
+        private Vector3 CameraForward
+        {
+            get
+            {
+                Matrix4 m = viewMatrix;
+                m.Invert();
+                return new Vector3(-m.Row2.X, -m.Row2.Y, -m.Row2.Z);
+            }
+        }
+
         Vector3 point = new Vector3 (0, 0, 0);
         internal void Zoom(Vector2 location, int p)
         {
@@ -215,12 +240,36 @@ namespace GUI
                 y = y * 4;
 
                 viewMatrix = Matrix4.Mult(Matrix4.CreateTranslation(point), mouseDownMatrix);
-                viewMatrix = Matrix4.Mult(Matrix4.CreateRotationZ(x), viewMatrix);
+                viewMatrix = Matrix4.Mult(Matrix4.CreateRotationZ(-x), viewMatrix);
                 Matrix4 m = viewMatrix;
                 m.Invert();
                 Vector3 left = new Vector3(m.Row0.X, m.Row0.Y, m.Row0.Z);
                 viewMatrix = Matrix4.Mult(Matrix4.CreateFromAxisAngle(left, y), viewMatrix);
                 viewMatrix = Matrix4.Mult(Matrix4.CreateTranslation(-point), viewMatrix);
+            }
+            else if (isMouseLDown)
+            {
+            }
+            else
+            {
+                // Some hacky stuff to pass the mouse location to sub-objects
+                foreach (Object o in this.objects)
+                {
+                    if (o is IClickable3D)
+                    {
+                        Vector3 location = this.CameraPosition;
+
+                        Vector3 t = ComputeMouseTarget(screen_location);
+                        Vector3 direction = t - location;
+                        //Console.WriteLine("Camera Forward {0}, Pos = {1}", direction, location);
+                        direction.Normalize();
+
+                        IClickable3D c = o as IClickable3D;
+                        //Vector3 target = this.ComputeMouseTarget(screen_location);
+                        //Vector2 t = new Vector2 (target.X, target.Y) * 1000;
+                        c.IsPointOnObject(location * 1000, direction);
+                    }
+                }
             }
             //Console.WriteLine("Mouse Position = {0}", p);
         }
@@ -298,7 +347,7 @@ namespace GUI
 
         Vector3 p;
 
-        public void DrawAxis()
+        private void DrawAxis()
         {
 
             GL.Begin(BeginMode.Lines);
@@ -387,6 +436,27 @@ namespace GUI
             //GL.PointSize(1);
             ////GL.PopMatrix();
             //GL.PopMatrix();
+            GL.PushMatrix();
+            GL.Scale(new Vector3(1, 1, 1) / 1000);
+            foreach (Object o in this.objects)
+            {
+                if (o is IOpenGLDrawable)
+                {
+                    IOpenGLDrawable d = o as IOpenGLDrawable;
+                    d.Draw();
+                }
+            }
+            GL.PopMatrix();
+        }
+
+        public void Draw()
+        {
+            this.DrawAxis();
+        }
+
+        public void AddObject(object o)
+        {
+            objects.Add(o);
         }
     }
 

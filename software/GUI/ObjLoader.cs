@@ -201,14 +201,6 @@ namespace GUI
 
         private void Slice(Plane p)
         {
-            // float epsilon = p.point.Length * 0.0001f;
-            // Plane temp = new Plane();
-            // temp.normal = p.normal;
-            // temp.point = p.point + p.normal * epsilon;
-            // Slice2(f, temp);
-            // temp.point = p.point - p.normal * epsilon;
-            // Slice2(f, temp);
-
             float epsilon = 0.01f; // TODO: compute proper epsilon value
             
             List<PolyLine> polyLines = new List<PolyLine>();
@@ -255,62 +247,43 @@ namespace GUI
             List<PolyLine> newPolyLines = new List<PolyLine>();
             for (int i = 0; i < polyLines.Count(); i++)
             {
-                
                 int points = polyLines[i].points.Count();
-                //for (int a = 0; a < points; a++)
-                //{
-                    Vector3 v1 = polyLines[i].points[0];
-                    Vector3 v2 = polyLines[i].points[1];
+                
+                Vector3 v1 = polyLines[i].points[0];
+                Vector3 v2 = polyLines[i].points[1];
 
-                    //DrawCone1(v1, v2);
+                //DrawCone1(v1, v2);
             
-                    List<Vector3> points_on_line = new List<Vector3>();
-                    foreach (Vector3 v in all_points)
+                List<Vector3> points_on_line = new List<Vector3>();
+                foreach (Vector3 v in all_points)
+                {
+                    if ((v1 - v).Length >= epsilon && (v2 - v).Length >= epsilon && DistanceToCylinder(v1, v2, v) < epsilon)
                     {
-                        if ((v1 - v).Length >= epsilon && (v2 - v).Length >= epsilon && DistanceToCylinder(v1, v2, v) < epsilon)
-                        {
-                            points_on_line.Add(v);
-                        }
+                        points_on_line.Add(v);
                     }
+                }
                     
-                    //for (int j = 0; j < polyLines.Count(); j++)
-                    //{
-                    //    if (j != i)
-                    //    {
-                    //        foreach (Vector3 v in polyLines[j].points)
-                    //        {
-                    //            // If this point is on the line (but not the same vertex) for polyLines[i]... Split
-                    //            if (DistanceToCylinder(v1, v2, v) < epsilon)
-                    //            {
-                    //                points_on_line.Add(v);
-                    //            }
-                    //        }
-                    //    }
-                    //}
-                    
-                    points_on_line.Insert(0, v1);
-                    points_on_line.Add(v2);
+                points_on_line.Insert(0, v1);
+                points_on_line.Add(v2);
             
-                    // Order from v1 to v2
-                    var sorted = points_on_line.OrderBy(order_vec => (order_vec - v1).Length);
+                // Order from v1 to v2
+                var sorted = points_on_line.OrderBy(order_vec => (order_vec - v1).Length);
             
-                    PolyLine newPolyLine = new PolyLine();
-                    foreach (Vector3 v in sorted)
+                PolyLine newPolyLine = new PolyLine();
+                foreach (Vector3 v in sorted)
+                {
+                    if (newPolyLine.points.Count() == 0 || (newPolyLine.points[newPolyLine.points.Count() - 1] - v).Length > epsilon)
                     {
-                        if (newPolyLine.points.Count() == 0 || (newPolyLine.points[newPolyLine.points.Count() - 1] - v).Length > epsilon)
-                        {
-                            newPolyLine.points.Add(v);
-                        }
+                        newPolyLine.points.Add(v);
                     }
-                    if (newPolyLine.points.Count() >= 2)
-                    {
-                        newPolyLines.Add(newPolyLine);
-                    }
-                    if (newPolyLine.points.Count() >= 3)
-                    {
-
-                    }
-                //}
+                }
+                if (newPolyLine.points.Count() >= 2)
+                {
+                    newPolyLines.Add(newPolyLine);
+                }
+                if (newPolyLine.points.Count() >= 3)
+                {
+                }
             }
             
   
@@ -320,8 +293,6 @@ namespace GUI
             
             foreach (PolyLine l in newPolyLines)
             {
-                //PolyLine l = Slice2(f, p);
-            
                 int lastIndex = -1;
                 foreach (Vector3 pointVec in l.points)
                 {
@@ -369,13 +340,11 @@ namespace GUI
                     lastIndex = currentIndex;
                 }
             }
-            
-            int list_index = 0;
 
-            
-
+            //GL.PushMatrix();
+            //GL.Translate(new Vector3(0, 0, 100));
             //GL.Begin(BeginMode.Lines);
-            //foreach (LinePointIndices l in lpi)
+            //foreach (LinePointIndices l in lpis)
             //{
             //    GL.Color3(Color.Red);
             //    GL.Vertex3(vertices[l.indices[0]]);
@@ -383,108 +352,176 @@ namespace GUI
             //    GL.Vertex3(vertices[l.indices[1]]);
             //}
             //GL.End();
+            //GL.PopMatrix();
 
-
-            List<Vector3> scaled = new List<Vector3>();
+            //List<Vector3> scaled = new List<Vector3>();
             List<int> vector_indices_to_see = new List<int>();
             foreach (Vector3 v in vertices)
             {
-                scaled.Add(v / 125);
+                //scaled.Add(v / 125);
                 vector_indices_to_see.Add(vector_indices_to_see.Count());
             }
 
 
             GL.PushMatrix();
             GL.PointSize(10);
-            while (vector_indices_to_see.Count () > 0)
+            List<int> seenVertices = new List<int>();
+            while(vector_indices_to_see.Count() > 0)
             {
-                List <LinePointIndices> loops = FindLoop(v_lookup, lpis, new LinePointIndices(), vector_indices_to_see[0]);
+                List<int> line_indices = v_lookup [vector_indices_to_see[0]];
                 vector_indices_to_see.RemoveAt(0);
-            
-                var sorted2 = loops.OrderBy(m => -m.indices.Count());
-                
-                foreach (LinePointIndices l in sorted2)
-                {
-                    
-                    GL.Color3(Color.LightGray);
-                    DrawCone1(vertices[l.indices[0]], vertices[l.indices[1]]);
-                    GL.Color3(Color.LightBlue);
-                    GL.Begin(BeginMode.LineLoop);
-                    foreach (int i in l.indices)
-                    {
-                        vector_indices_to_see.RemoveAll(value => value == i);
-                        GL.Vertex3(vertices[i]);
-                    }
-                    GL.End();
-                    //break;
-                    GL.Translate(new Vector3(0, 0, +100));
-                }
-            }
-            GL.PointSize(1);
-            GL.PopMatrix();
-
-
-            //for (int i = 0; i < polyLines.Count(); i++)
-            //{
-            //    PolyLine line = polyLines[i];
-            //    for (int j = i + 1; j < polyLines.Count(); j++)
-            //    {
-            //
-            //    }
-            //}
-        }
-
-        private List<LinePointIndices> FindLoop(List<List<int>> lookup_lines_from_vertex, List<LinePointIndices> lpis, LinePointIndices vertex_list, int vertex_index)
-        {
-            //List<int> used_lines = new List<int>();
-            List<LinePointIndices> return_list = new List<LinePointIndices>();
-
-            if (vertex_list.indices.Count() > 100)
-            {
-                Console.WriteLine("SHOOOOOT");
-                return return_list;
-            }
-
-            // Found a loop!
-            if (vertex_list.indices.Contains(vertex_index))
-            {
-                int index = vertex_list.indices.IndexOf(vertex_index);
-                vertex_list.indices.RemoveRange(0, index);
-                if (vertex_list.indices.Count() >= 3)
-                {
-                    return_list.Add(vertex_list);
-                }
-                return return_list;
-            }
-
-            List<int> line_indexes = lookup_lines_from_vertex[vertex_index];
-
-            // line_indexes should point to at least one line
-            // line_indexes.RemoveAll(used_lines.Contains); // Could do this
-
-            
-            foreach (int index in line_indexes)
-            {
-                LinePointIndices l = lpis[index];
-                // Use only lines that started (point 0) at the index
-                if (l.indices[0] != vertex_index)
+                if (line_indices.Count() == 0)
                 {
                     continue;
                 }
+                LinePointIndices line = lpis[line_indices[0]]; // Only need to look at one line with this vertex
+                LinePointIndices start_line = new LinePointIndices();
+                start_line.indices.Add(line.indices[0]);
+                start_line.indices.Add(line.indices[1]);
+                GL.Color3(Color.Green);
+                DrawCone1(vertices[start_line.indices[0]], vertices[start_line.indices[1]]);
+                LinePointIndices loop = FindLoop(seenVertices, p.normal, vertices, v_lookup, lpis, start_line);
 
-                // Find the vertex that's not the current one
-                int new_index = l.indices[0];
-                if (new_index == vertex_index)
-                {
-                    new_index = l.indices[1];
+                if (loop != null)
+                {    
+                    GL.Color3(Color.LightBlue);
+                    GL.Begin(BeginMode.LineLoop);
+                    Vector3 add = new Vector3(0, 0, 0);
+                    foreach (int i in loop.indices)
+                    {
+                        vector_indices_to_see.RemoveAll(value => value == i);
+                        GL.Vertex3(vertices[i] + add);
+                        seenVertices.Add(i);
+                        //add += new Vector3(0, 0, 25);
+                    }
+                    GL.End();
+                    //GL.Translate(new Vector3(0, 0, +100));
                 }
-                LinePointIndices newLinePoints = new LinePointIndices();
-                newLinePoints.indices.AddRange(vertex_list.indices);
-                newLinePoints.indices.Add(vertex_index);
-                return_list.AddRange(FindLoop(lookup_lines_from_vertex, lpis, newLinePoints, new_index));
+                //break;
+            }
+            GL.PointSize(1);
+            GL.PopMatrix();
+        }
+
+        private LinePointIndices FindLoop(List<int> seenVertices, Vector3 normal, List<Vector3> vertices, List<List<int>> v_lookup, List<LinePointIndices> lpis, LinePointIndices start_line)
+        {
+            List<LinePointIndices> return_list = new List<LinePointIndices>();
+
+            if (seenVertices.Contains(start_line.indices[0]) || seenVertices.Contains(start_line.indices[1]))
+            {
+                return null;
             }
 
-            return return_list;
+            while (start_line.indices.Count <= 100)
+            {
+                var point_count = start_line.indices.Count();    
+                var headIndex = start_line.indices[point_count - 1];
+                var lastIndex = start_line.indices[point_count - 2];
+                var headPoint = vertices[headIndex];
+                var lastPoint = vertices[lastIndex];
+
+                var direction = headPoint - lastPoint;
+                direction.Normalize();
+
+                // Find all the other segments starting at the head point
+                List<int> line_indexes = v_lookup[headIndex];
+                // To start at the head point, the first element must match the head index
+                line_indexes.RemoveAll(i => lpis[i].indices[0] != headIndex);
+
+                float largestAngle = 0;
+                int bestIndex = -1;
+                // Always choose the leftmost vertex - maximize the loop size!
+                // Find the leftmost vertex below, if there are any vertices.
+                foreach (int index in line_indexes)
+                {
+                    LinePointIndices l = lpis[index];
+                    Vector3 newPoint = vertices[l.indices[1]];
+
+                    Vector3 newDirection = newPoint - headPoint;
+                    newDirection.Normalize();
+                    float angle = Angle(direction, -newDirection, normal);
+                    if (largestAngle < angle || bestIndex == -1)
+                    {
+                        bestIndex = l.indices[1];
+                        largestAngle = angle;
+                    }
+                }
+
+                if (bestIndex == -1)
+                {
+                    // Bad - line terminated, can't make a loop
+                    Console.WriteLine("Not a looped line!");
+                    return null;
+                }
+
+                if (seenVertices.Contains(bestIndex))
+                {
+                    return null;
+                }
+
+                // Add the new point to the line - but first check this causes a loop!
+                var firstIndex = start_line.indices.IndexOf(headIndex);
+                if (firstIndex != point_count - 1)
+                {
+                    // Got a loop!  See if the point after head is the best index
+                    if (start_line.indices[firstIndex + 1] == bestIndex)
+                    {
+                        // Keeper!  Remove the starting interior vertices, inclusive of the
+                        // matched index to head (don't need two of the same point floating around).
+                        start_line.indices.RemoveRange(0, firstIndex + 1);
+                        return start_line;
+                    }
+                }
+                start_line.indices.Add(bestIndex);
+            }
+
+            throw new Exception("Too Many Vertices!");
+        }
+
+        /// <summary>
+        /// Measure the counter-clockwise angle around the normal in radians from one vector to another.
+        /// </summary>
+        /// <param name="one"></param>
+        /// <param name="another"></param>
+        /// <param name="normal"></param>
+        /// <returns></returns>
+        private float Angle(Vector3 one, Vector3 another, Vector3 normal)
+        {
+            float inv_cos = Vector3.Dot(one, another);
+            float inv_sin = Vector3.Dot(Vector3.Cross(one, another), normal);
+
+            float angle = 0;
+            if (Math.Abs(inv_cos) > Math.Abs(inv_sin))
+            {
+                if (inv_cos > 0)
+                {
+                    // Between -Pi/2 and Pi/2
+                    angle = (float)Math.Asin(inv_sin);
+                }
+                else
+                {
+                    angle = OpenTK.MathHelper.Pi - (float)Math.Asin(inv_sin);
+                }
+            }
+            else
+            {
+                // Determine the quadrant
+                if (inv_sin > 0)
+                {
+                    // Angle is between 0 and Pi
+                    angle = (float)Math.Acos(inv_cos);
+                }
+                else
+                {
+                    // Angle is between Pi and 2*Pi
+                    angle = (float)Math.Acos(-inv_cos) + OpenTK.MathHelper.Pi;
+                }
+            }
+            if (angle < 0)
+            {
+                angle += OpenTK.MathHelper.TwoPi;
+            }
+            return angle;
         }
 
         private class LinePointIndices
@@ -847,13 +884,13 @@ namespace GUI
                 }
                 GL.End();
 
-                GL.Color3(Color.LightGray);
-                GL.Begin(BeginMode.LineLoop);
-                foreach (Vector3 v in f.vertices)
-                {
-                    GL.Vertex3(v);
-                }
-                GL.End();
+                //GL.Color3(Color.LightGray);
+                //GL.Begin(BeginMode.LineLoop);
+                //foreach (Vector3 v in f.vertices)
+                //{
+                //    GL.Vertex3(v);
+                //}
+                //GL.End();
 
                 if (i == closestFace)
                 {
@@ -935,6 +972,12 @@ namespace GUI
                 //float d = DistanceToCylinder(new Vector3(1000, 0, 0), new Vector3(0, 0, 0), mousePoint);
                 //Console.WriteLine("Distance to Cylinder = {0}, Point = {1}", d, mousePoint);
                 //Console.WriteLine("Mouse Point = {0}", mousePoint);
+                
+                //Vector3 original = new Vector3(1, 0, 0);
+                //Vector3 another = mousePoint - new Vector3 (500, 500, 0);
+                //another.Normalize();
+                //float d = OpenTK.MathHelper.RadiansToDegrees(Angle(original, another, new Vector3(0, 0, 1)));
+                //Console.WriteLine("Angle = " + d);
             }
             return closest.distance;
             //Console.WriteLine("Outside Face");

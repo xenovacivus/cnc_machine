@@ -123,6 +123,10 @@
     <Content Include="Icon.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Clipper\clipper_library.csproj">
+      <Project>{9b062971-a88e-4a3d-b3c9-12b78d15fa66}</Project>
+      <Name>clipper_library</Name>
+    </ProjectReference>
     <ProjectReference Include="..\GCode\Router.csproj">
       <Project>{6a2ed2bc-1fea-46e3-8403-3c484a7bcca5}</Project>
       <Name>Router</Name>

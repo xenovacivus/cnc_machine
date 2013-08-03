@@ -31,17 +31,17 @@ namespace GUI
             parent.Resize += new EventHandler(parent_Resize);
             viewMatrix = Matrix4.Mult(Matrix4.CreateRotationX(-OpenTK.MathHelper.PiOver4), viewMatrix);
             
-            ObjLoader l = new ObjLoader();
-            ObjLoader.Face f = new ObjLoader.Face();
-            f.vertices.Add(new Vector3(0, 0, 0));
-            f.vertices.Add(new Vector3(0, 1000, 0));
-            f.vertices.Add(new Vector3(1000, 1000, 0));
-            f.vertices.Add(new Vector3(1000, 2000, 0));
-            f.vertices.Add(new Vector3(2000, 2000, 0));
-            f.vertices.Add(new Vector3(2000, 0, 0));
-            //f.vertices.Add(new Vector3(1000, 0, 0));
-            l.AddFace(f);
-            this.objects.Add(l);
+            //ObjLoader l = new ObjLoader();
+            //ObjLoader.Face f = new ObjLoader.Face();
+            //f.vertices.Add(new Vector3(0, 0, 0));
+            //f.vertices.Add(new Vector3(0, 1000, 0));
+            //f.vertices.Add(new Vector3(1000, 1000, 0));
+            //f.vertices.Add(new Vector3(1000, 2000, 0));
+            //f.vertices.Add(new Vector3(2000, 2000, 0));
+            //f.vertices.Add(new Vector3(2000, 0, 0));
+            ////f.vertices.Add(new Vector3(1000, 0, 0));
+            //l.AddFace(f);
+            //this.objects.Add(l);
         }
 
         void parent_Resize(object sender, EventArgs e)

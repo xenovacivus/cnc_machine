@@ -201,7 +201,7 @@ namespace GUI
         {
             float epsilon = 0.01f; // TODO: compute proper epsilon value
             
-            List<PolyLine> polyLines = new List<PolyLine>();
+            List<PolyLine> linePile = new List<PolyLine>(); // Pile of disconnected lines on the slice plane
             List<Vector3> all_points = new List<Vector3>();
             foreach (Face f in this.faces)
             {
@@ -210,7 +210,7 @@ namespace GUI
                 // Only add lines with exactly 2 points - others are a no match or error
                 if (newLine.points.Count() == 2 && (newLine.points[0] - newLine.points[1]).Length> epsilon)
                 {
-                    polyLines.Add(newLine);
+                    linePile.Add(newLine);
 
                     // Add the vertices to the all_points list - only need to add the first one, the tail will be the head of another point
                     bool matched = false;
@@ -229,7 +229,7 @@ namespace GUI
                 }
             }
 
-            // polyLines is a unordered list of line segments.
+            // linePile is a unordered list of line segments.
             // If a line segment is oriented with point[0] on (0, 0, 0) and point[1] 
             // somewhere on the positive Y axis, the solid object is in the direction of the positive x axis.
             //
@@ -243,12 +243,12 @@ namespace GUI
 
 
             List<PolyLine> newPolyLines = new List<PolyLine>();
-            for (int i = 0; i < polyLines.Count(); i++)
+            for (int i = 0; i < linePile.Count(); i++)
             {
-                int points = polyLines[i].points.Count();
+                int points = linePile[i].points.Count();
                 
-                Vector3 v1 = polyLines[i].points[0];
-                Vector3 v2 = polyLines[i].points[1];
+                Vector3 v1 = linePile[i].points[0];
+                Vector3 v2 = linePile[i].points[1];
 
                 //DrawCone1(v1, v2);
             
@@ -284,7 +284,6 @@ namespace GUI
                     // Shouldn't get here!
                 }
             }
-            
   
             List<LinePointIndices> lpis = new List<LinePointIndices>();
             List<Vector3> vertices = new List<Vector3>();
@@ -340,19 +339,6 @@ namespace GUI
                 }
             }
 
-            //GL.PushMatrix();
-            //GL.Translate(new Vector3(0, 0, 100));
-            //GL.Begin(BeginMode.Lines);
-            //foreach (LinePointIndices l in lpis)
-            //{
-            //    GL.Color3(Color.Red);
-            //    GL.Vertex3(vertices[l.indices[0]]);
-            //    GL.Color3(Color.Green);
-            //    GL.Vertex3(vertices[l.indices[1]]);
-            //}
-            //GL.End();
-            //GL.PopMatrix();
-
             //List<Vector3> scaled = new List<Vector3>();
             List<int> vector_indices_to_see = new List<int>();
             foreach (Vector3 v in vertices)
@@ -403,130 +389,30 @@ namespace GUI
             GL.PointSize(1);
             GL.PopMatrix();
 
-
             Vector3 normal = new Vector3(0, 0, 1);
-            float toolRadius = 1000;
+            float toolRadius = 100;
             GL.LineWidth(1);
+
+            List<IntPoint> boundingBox = new List<IntPoint>();
+            boundingBox.Add(new IntPoint(-1000, -1000));
+            boundingBox.Add(new IntPoint(3000, -1000));
+            boundingBox.Add(new IntPoint(3000, 3000));
+            boundingBox.Add(new IntPoint(-1000, 3000));
 
             List<LineLoop> loops = new List<LineLoop>();
 
-            GL.Disable(EnableCap.Lighting);
             foreach (LinePointIndices l in slices)
             {
                 LineStrip line = new LineStrip();
                 for (int i = 0; i < l.indices.Count (); i++)
                 {
-                    int i0 = (i - 1 + l.indices.Count()) % l.indices.Count();
-                    int i1 = (i + 0 + l.indices.Count()) % l.indices.Count();
-                    int i2 = (i + 1 + l.indices.Count()) % l.indices.Count();
-                    int i3 = (i + 2 + l.indices.Count()) % l.indices.Count();
-
-                    Vector3 v1 = vertices[l.indices[i1]];
-                    Vector3 v2 = vertices[l.indices[i2]];
-                    Vector3 v3 = vertices[l.indices[i3]];
-
-                    Vector3 direction = v2 - v1;
-                    direction.Normalize();
-                    Vector3 perpendicular = Vector3.Cross(normal, direction);
-                    //perpendicular.Normalize();
-
-
-
-                    Vector3 dirNext = v3 - v2; // vertices[l.indices[i3]] - vertices[l.indices[i2]];
-                    dirNext.Normalize();
-                    Vector3 perp2 = Vector3.Cross(normal, dirNext);
-                    float a = Angle(direction, dirNext, normal) / 2;// -OpenTK.MathHelper.Pi;
-
-                    //if (Math.Abs(a) < 0.01 || Math.Abs(a - OpenTK.MathHelper.PiOver2) < 0.01)
-                    //{
-                    //    continue;
-                    //}
-
-                    float extend = (float)Math.Tan(a);
-                    
-                    if (extend > 0)
-                    {
-                        extend = 0;
-                    }
-                    
-                    Vector3 p1 = (v1 + v2) / 2 + perpendicular * toolRadius;
-                    Vector3 p2 = (v2 - direction * extend * toolRadius) + perpendicular * toolRadius;
-                    Vector3 P3 = (v2 + v3) / 2 + perp2 * toolRadius;
-
-                    
-                    //GL.Begin(BeginMode.Lines);
-                    
-                    if (a <= OpenTK.MathHelper.PiOver2)
-                    {
-                        //GL.Color3(Color.Blue);
-                        //GL.Vertex3(p1);
-                        //GL.Vertex3(p2);
-                        //GL.Color3(Color.Orange);
-                        //GL.Vertex3(p2);
-                        //GL.Vertex3((v2 - direction * extend * toolRadius) + perp2 * toolRadius);
-                        //GL.Color3(Color.Purple);
-                        //GL.Vertex3((v2 - direction * extend * toolRadius) + perp2 * toolRadius);
-                        //GL.Vertex3(P3);
-
-                        line.Append(p1);
-                        line.Append(p2);
-                        line.Append((v2 - direction * extend * toolRadius) + perp2 * toolRadius);
-                        line.Append(P3);
-                    }
-                    else
-                    {
-                        line.Append(p1);
-                        line.Append(p2);
-                        line.Append(P3);
-                        //GL.Color3(Color.Green);
-                        //GL.Vertex3(p1);
-                        //GL.Vertex3(p2);
-                        //GL.Color3(Color.Red);
-                        //GL.Vertex3(p2);
-                        //GL.Vertex3(P3);
-                    }
-
-                    
-                    
-
-                    
-                    
-                    //GL.Vertex3(v1 + perpendicular * toolRadius);
-                    //GL.Vertex3(v2 + perpendicular * toolRadius);
-                    //GL.Color3(Color.Red);
-                    //GL.Vertex3(v2 + perpendicular * (toolRadius + 1));
-                    //GL.Vertex3(v2 + perpendicular * (toolRadius + 1) - direction * extend * toolRadius);
-                    //    
-                    //GL.Color3(Color.Blue);
-                    //GL.Vertex3(v2 + perp2 * (toolRadius + 1));
-                    //GL.Vertex3(v2 + perp2 * (toolRadius + 1) + dirNext * extend * toolRadius);
-                    
-                    //GL.End();
+                    line.Append(vertices[l.indices[i]]);
                 }
-                GL.Color3(Color.LightPink);
-                LineLoop loop = new LineLoop(line);
-                
-                try
-                {
-                    loop.Clean(normal);
-                }
-                catch (Exception e)
-                {
-                }
-                loops.Add(loop);
-                loop.Draw();
+                line.Append(vertices[l.indices[0]]);
+                loops.Add(new LineLoop (line));
             }
-            GL.Enable(EnableCap.Lighting);
 
-
-            //Clipper c = new Clipper();
-            //c.Clear();
-            //List<IntPoint> polygon = new List<IntPoint>();
-            
-            //c.AddPolygon(
-            //bool succeeded = c.Execute(GetClipType(), solution, GetPolyFillType(), GetPolyFillType());
-
-            if (loops.Count() == 2)
+            if (loops.Count() > 0)
             {
                 Vector3 up = new Vector3(0, 0, 1);
                 if (Math.Abs (normal.Z) > 0.8)
@@ -534,68 +420,102 @@ namespace GUI
                     up = new Vector3(1, 0, 0);
                 }
 
-                Matrix4 transform = Matrix4.LookAt(normal, new Vector3 (0, 0, 0), up);
+                float distance = Vector3.Dot(loops[0].GetVertex(0), normal);
+
+                Matrix4 transform = Matrix4.LookAt(normal * distance, normal * (distance - 1), up);
                 Matrix4 inverseTransform = Matrix4.Invert(transform);
+                
                 Clipper c = new Clipper();
                 c.Clear();
 
                 try
                 {
+                    // These loops go clockwise
                     foreach (LineLoop loop in loops)
                     {
                         List<IntPoint> polygon = new List<IntPoint>();
                         foreach (Vector3 vertex in loop.Vertices)
                         {
-                            // Convert the float points into integers
-
                             Vector3 result = Vector3.Transform(vertex, transform);
-                            IntPoint point = new IntPoint((long)result.X, (long)result.Y);
-
-                            polygon.Add(point);
-
-                            //Vector3 original = Vector3.Transform(result, inverseTransform);
-
-                            //Console.Write("Vertex {0} => IntPoint {1}", vertex, point);
+                            polygon.Add(new IntPoint((long)result.X, (long)result.Y));
                         }
                         polygon.RemoveAt(0);
-                        //polygon.Reverse();
-                        c.AddPolygon(polygon, PolyType.ptSubject);
+                        c.AddPolygon(polygon, PolyType.ptClip);
+                        GL.PushMatrix();
+                        GL.Translate(new Vector3(0, 0, 100));
+                        loop.Draw();
+                        GL.PopMatrix();
                     }
                     List<List<IntPoint>> union = new List<List<IntPoint>>();
-                    bool r = c.Execute(ClipType.ctUnion, union, PolyFillType.pftNegative, PolyFillType.pftNegative);
+                    bool r = c.Execute(ClipType.ctUnion, union, PolyFillType.pftNonZero, PolyFillType.pftNonZero);
 
-                    List<List<IntPoint>> with_offset = Clipper.OffsetPolygons(union, 500, JoinType.jtSquare);
-                    GL.PushMatrix();
-                    
+                    List<List<IntPoint>> with_offset = Clipper.OffsetPolygons(union, toolRadius, JoinType.jtSquare);
+                    List<List<IntPoint>> whatsLeft = Clipper.OffsetPolygons(with_offset, -toolRadius, JoinType.jtRound);
+
+
                     List<LineStrip> strips = new List<LineStrip>();
                     foreach (List<IntPoint> polygon in with_offset)
                     {
-                        GL.Translate(new Vector3(0, 0, 1000));
-                        polygon.Reverse();
                         LineStrip strip = new LineStrip();
                         foreach (IntPoint point in polygon)
                         {
                             strip.Append(Vector3.Transform(new Vector3(point.X, point.Y, 0.0f), inverseTransform));
                         }
                         strip.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), inverseTransform));
-                        
-                        strips.Add(strip);
-                        GL.LineWidth(10);
-                        strip.Draw();
-                        GL.LineWidth(1);
-                    }
-                    GL.PopMatrix();
 
-                    //LineLoop l = LineLoop.Intersect(loops[0], loops[1], normal);
-                    //if (l != null)
+                        strips.Add(strip);
+                        new LineLoop(strip).Draw();
+                    }
+
+
+                    List<List<IntPoint>> removeArea = new List<List<IntPoint>>();
+                    c.Clear();
+                    c.AddPolygons(with_offset, PolyType.ptClip);
+                    c.AddPolygon(boundingBox, PolyType.ptSubject);
+                    List<List<IntPoint>> resultingPolygon = new List<List<IntPoint>>();
+                    c.Execute(ClipType.ctDifference, removeArea, PolyFillType.pftNonZero, PolyFillType.pftNonZero);
+
+                    strips = new List<LineStrip>();
+                    double area = 1;
+                    int loopTimes = 0;
+                    while (area > 0 && loopTimes++ < 200)
+                    {
+                        area = 0;
+                        foreach (List<IntPoint> polygon in removeArea)
+                        {
+                            area += Clipper.Area(polygon);
+                            LineStrip strip = new LineStrip();
+                            foreach (IntPoint point in polygon)
+                            {
+                                strip.Append(Vector3.Transform(new Vector3(point.X, point.Y, 0.0f), inverseTransform));
+                            }
+                            strip.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), inverseTransform));
+
+                            strips.Add(strip);
+                            new LineLoop(strip).Draw();
+                        }
+                        removeArea = Clipper.OffsetPolygons(removeArea, -toolRadius, JoinType.jtSquare);
+                    }
+
+
+                    ////strips = new List<LineStrip>();
+                    //GL.Color3(Color.Red);
+                    //GL.LineWidth(2);
+                    //foreach (List<IntPoint> polygon in whatsLeft)
                     //{
-                    //    GL.PushMatrix();
-                    //    GL.LineWidth(5);
-                    //    GL.Translate(0, 0, 100);
-                    //    l.Draw();
-                    //    GL.LineWidth(1);
-                    //    GL.PopMatrix();
+                    //    LineStrip strip = new LineStrip();
+                    //    foreach (IntPoint point in polygon)
+                    //    {
+                    //        strip.Append(Vector3.Transform(new Vector3(point.X, point.Y, 0.0f), inverseTransform));
+                    //    }
+                    //    strip.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), inverseTransform));
+                    //
+                    //    strips.Add(strip);
+                    //    new LineLoop(strip).Draw();
                     //}
+                    //GL.LineWidth(1);
+
+
                 }
                 catch (Exception e)
                 {
@@ -680,6 +600,7 @@ namespace GUI
 
             public void Draw()
             {
+                GL.Disable(EnableCap.Lighting);
                 GL.Color3(Color.Yellow);
                 GL.Begin(BeginMode.LineStrip);
                 foreach (Vector3 v in Vertices)
@@ -690,15 +611,19 @@ namespace GUI
                 GL.End();
 
                 GL.Color3(Color.Yellow);
-                GL.PointSize(5);
-                GL.Begin(BeginMode.Points);
+
+                GL.PointSize(15);
                 foreach (Vector3 v in Vertices)
                 {
+                    GL.Begin(BeginMode.Points);
                     GL.Vertex3(v);
+                    GL.End();
                     GL.Color3(Color.Blue);
+                    GL.PointSize(5);
                 }
-                GL.End();
+                
                 GL.PointSize(1);
+                GL.Enable(EnableCap.Lighting);
             }
         }
 

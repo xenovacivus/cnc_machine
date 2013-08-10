@@ -14,6 +14,9 @@ using Utilities;
 
 namespace GUI
 {
+
+    using Polygon = List<IntPoint>;
+    using Polygons = List<List<IntPoint>>;
     class ObjLoader: IOpenGLDrawable, IClickable3D
     {
         public class Intersect
@@ -443,7 +446,7 @@ namespace GUI
                         c.AddPolygon(polygon, PolyType.ptClip);
                         GL.PushMatrix();
                         GL.Translate(new Vector3(0, 0, 100));
-                        loop.Draw();
+                        //loop.Draw();
                         GL.PopMatrix();
                     }
                     List<List<IntPoint>> union = new List<List<IntPoint>>();
@@ -464,7 +467,7 @@ namespace GUI
                         strip.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), inverseTransform));
 
                         strips.Add(strip);
-                        new LineLoop(strip).Draw();
+                        //new LineLoop(strip).Draw();
                     }
 
 
@@ -474,28 +477,159 @@ namespace GUI
                     c.AddPolygon(boundingBox, PolyType.ptSubject);
                     List<List<IntPoint>> resultingPolygon = new List<List<IntPoint>>();
                     c.Execute(ClipType.ctDifference, removeArea, PolyFillType.pftNonZero, PolyFillType.pftNonZero);
+                    removeArea = Clipper.CleanPolygons(removeArea, toolRadius / 100);
+                    
+                    c.Clear();
+                    c.AddPolygons(removeArea, PolyType.ptClip);
+                    PolyTree test = new PolyTree();
+                    c.Execute(ClipType.ctUnion, test, PolyFillType.pftNonZero, PolyFillType.pftNonZero);
 
-                    strips = new List<LineStrip>();
-                    double area = 1;
-                    int loopTimes = 0;
-                    while (area > 0 && loopTimes++ < 200)
+                    //PolyNode pn = test.GetFirst();
+                    //while (pn != null)
+                    //{
+                    //    if (pn.IsHole)
+                    //    {
+                    //        LineLoop l = new LineLoop(pn.Contour, inverseTransform);
+                    //        l.Draw();
+                    //    }
+                    //    pn = pn.GetNext();
+                    //}
+                    List<Polygons> polys = FlattenPolyTree(test);
+
+                    //GL.PushMatrix();
+                    foreach (Polygons polygons in polys)
                     {
-                        area = 0;
-                        foreach (List<IntPoint> polygon in removeArea)
+                        //GL.Translate(new Vector3 (0, 0, 100));
+                        //foreach (Polygon polygon in polygons)
+                        //{
+                        //    LineLoop l = new LineLoop(polygon, inverseTransform);
+                        //    l.Draw();
+                        //}
+                        List<Polygons> paths = ReducePolygon(polygons, toolRadius, inverseTransform);
+                        //IOrderedEnumerable<List<IntPoint>> ordered = paths.OrderBy(poly => Clipper.Area(poly));
+                        GL.PushMatrix();
+                        List<Polygons> paths2 = new List<Polygons>();
+                        List<Polygons> paths3 = new List<Polygons>();
+                        foreach (Polygons polygons2 in paths)
                         {
-                            area += Clipper.Area(polygon);
-                            LineStrip strip = new LineStrip();
-                            foreach (IntPoint point in polygon)
+                            var newPolys = new Polygons();
+                            foreach (Polygon poly in polygons2)
                             {
-                                strip.Append(Vector3.Transform(new Vector3(point.X, point.Y, 0.0f), inverseTransform));
+                                if (Clipper.Area(poly) > 0)
+                                {
+                                    newPolys.Add(poly);
+                                }
                             }
-                            strip.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), inverseTransform));
+                            paths2.Add(newPolys);
 
-                            strips.Add(strip);
-                            new LineLoop(strip).Draw();
+                            //GL.Translate(new Vector3(0, 0, 100));
+                            var newInnerPolys = new Polygons();
+                            foreach (Polygon poly in polygons2)
+                            {
+                                
+                                if (paths3.Count() == 0)
+                                {
+                                    //newInnerPoly
+                                }
+                                if (Clipper.Area(poly) < 0)
+                                {
+                                  LineLoop l = new LineLoop(poly, inverseTransform);
+                                  l.Draw();
+                                }
+                            }
+                            
                         }
-                        removeArea = Clipper.OffsetPolygons(removeArea, -toolRadius, JoinType.jtSquare);
+                        foreach (Polygons polygons2 in paths2)
+                        {
+                            GL.Translate(new Vector3(0, 0, 100));
+                            foreach (Polygon poly in polygons2)
+                            {
+                                LineLoop l = new LineLoop(poly, inverseTransform);
+                                l.Draw();
+                            }
+                        }
+                        GL.PopMatrix();
                     }
+                    //GL.PopMatrix();
+
+
+                    double boundingBoxArea = Clipper.Area(boundingBox);
+                    // Outer Polygon
+                    // Inner Polygons
+                    //ReducePolygon(boundingBox, with_offset, toolRadius, inverseTransform);
+
+
+                    //strips = new List<LineStrip>();
+                    //double area = 1;
+                    //int loopTimes = 0;
+
+
+                    //List<List<IntPoint>> cutPolygons = new List<List<IntPoint>>();
+                    //List<Vector3> parentPoints = new List<Vector3>();
+                    //GL.PushMatrix();
+                    //while (removeArea.Count() > 0)
+                    //{
+                    //    List<Vector3> points = new List<Vector3>();
+                    //    foreach (List<IntPoint> polygon in removeArea)
+                    //    {
+                    //        double area = Clipper.Area(polygon);
+                    //
+                    //        if (area > 0) // Bigger to Smaller
+                    //        {
+                    //        }
+                    //        IntPoint[] newP = new IntPoint[polygon.Count()];
+                    //        polygon.CopyTo(newP);
+                    //        cutPolygons.Add(new List<IntPoint>(newP));
+                    //        
+                    //
+                    //        LineLoop l = new LineLoop(polygon, inverseTransform);
+                    //        //l.Draw();
+                    //        points.AddRange(l.Vertices);
+                    //
+                    //        //ReducePolygon(null, polygon, toolRadius, inverseTransform);
+                    //        //area += Clipper.Area(polygon);
+                    //        //LineStrip strip = new LineStrip();
+                    //        //foreach (IntPoint point in polygon)
+                    //        //{
+                    //        //    strip.Append(Vector3.Transform(new Vector3(point.X, point.Y, 0.0f), inverseTransform));
+                    //        //}
+                    //        //strip.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), inverseTransform));
+                    //
+                    //        //strips.Add(strip);
+                    //        //new LineLoop(strip).Draw();
+                    //    }
+                    //
+                    //    //GL.Color3(Color.Black);
+                    //    //GL.Begin(BeginMode.Lines);
+                    //    //foreach (Vector3 v in points)
+                    //    //{
+                    //    //    foreach (Vector3 v2 in parentPoints)
+                    //    //    {
+                    //    //        if ((v - v2).Length < toolRadius * 2)
+                    //    //        {
+                    //    //            GL.Vertex3(v);
+                    //    //            GL.Vertex3(v2);
+                    //    //        }
+                    //    //    }
+                    //    //}
+                    //    //GL.End();
+                    //
+                    //    parentPoints = points;
+                    //    removeArea = Clipper.OffsetPolygons(removeArea, -toolRadius, JoinType.jtRound);
+                    //    removeArea = Clipper.CleanPolygons(removeArea, toolRadius / 100);
+                    //}
+                    //GL.PopMatrix();
+
+                    //IOrderedEnumerable<List<IntPoint>> ordered = cutPolygons.OrderBy(poly => Clipper.Area(poly));
+                    //
+                    //GL.PushMatrix();
+                    //foreach (List<IntPoint> poly in ordered)
+                    //{
+                    //    GL.Translate(new Vector3(0, 0, 100));
+                    //    LineLoop l = new LineLoop(poly, inverseTransform);
+                    //    l.Draw();
+                    //}
+                    //GL.PopMatrix();
 
 
                     ////strips = new List<LineStrip>();
@@ -515,12 +649,72 @@ namespace GUI
                     //}
                     //GL.LineWidth(1);
 
-
                 }
                 catch (Exception e)
                 {
                 }
             }
+        }
+
+        /// <summary>
+        /// Flatten a PolyTree into a list of sets of polygons, each set describing one entirely connected polygon.
+        /// </summary>
+        /// <param name="tree"></param>
+        /// <param name="polys"></param>
+        /// <returns></returns>
+        public static List<Polygons> FlattenPolyTree(PolyTree tree)
+        {
+            List<Polygons> polys = new List<Polygons>();
+            FlattenPolyNode(tree.Childs, polys);
+            return polys;
+        }
+
+        public static void FlattenPolyNode(List<PolyNode> nodes, List<Polygons>polys)
+        {
+            // Must pass in something that contains outer polygons (first childs of a polytree)
+            foreach (PolyNode node in nodes)
+            {
+                // First level children are all outer polgons
+                Polygons polygons = new Polygons();
+                polygons.Add(node.Contour);
+                if (node.IsHole)
+                {
+                    // Got a problem here...
+                }
+
+                // And the polygon can have many holes
+                foreach (PolyNode hole in node.Childs)
+                {
+                    if (!hole.IsHole)
+                    {
+                        // Got a problem here...
+                    }
+                    polygons.Add(hole.Contour);
+                    // If the holes have children, they will be outer polygons
+                    FlattenPolyNode(hole.Childs, polys);
+                }
+                polys.Add(polygons);
+            }
+        }
+
+        public static List<Polygons> ReducePolygon(Polygons polys, float toolRadius, Matrix4 transform)
+        {
+            List<Polygons> paths = new List<Polygons>();
+            List<List<IntPoint>> reducedPolygons = new List<List<IntPoint>>();
+            reducedPolygons.AddRange(polys);
+
+            while (reducedPolygons.Count() > 0)
+            {
+                paths.Add(reducedPolygons);
+                //foreach (Polygon _polygon in reducedPolygons)
+                //{
+                //    LineLoop loop = new LineLoop(_polygon, transform);
+                //    loop.Draw();
+                //}
+                reducedPolygons = Clipper.OffsetPolygons(reducedPolygons, -toolRadius, JoinType.jtRound);
+                reducedPolygons = Clipper.CleanPolygons(reducedPolygons, toolRadius / 100);
+            }
+            return paths;
         }
 
         public class LineStrip
@@ -632,7 +826,24 @@ namespace GUI
             public LineLoop()
             {
             }
+
+            public LineLoop(List<IntPoint> polygon, Matrix4 transform)
+            {
+                LineStrip l = new LineStrip();
+                foreach (IntPoint point in polygon)
+                {
+                    l.Append(Vector3.Transform(new Vector3(point.X, point.Y, 0.0f), transform));
+                }
+                l.Append(Vector3.Transform(new Vector3(polygon[0].X, polygon[0].Y, 0.0f), transform));
+                LineLoopFromLineStrip(l);
+            }
+            
             public LineLoop(LineStrip l)
+            {
+                LineLoopFromLineStrip(l);
+            }
+
+            private void LineLoopFromLineStrip(LineStrip l)
             {
                 foreach (Vector3 v in l.Vertices)
                 {
